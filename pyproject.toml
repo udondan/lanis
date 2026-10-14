@@ -9,7 +9,7 @@ description = "MCP server for Schulportal Hessen (Lanis)"
 license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
-    "mcp[cli]==2.2.0",
+    "mcp[cli]==2.3.0",
     "lanisapi==0.4.1",
     # lanisapi imports selectolax.parser, which selectolax 1.0 removed.
     "selectolax==0.4.13",
