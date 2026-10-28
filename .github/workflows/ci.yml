@@ -19,13 +19,22 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Codecov upload via OIDC
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.14"
       - run: pip install -e ".[dev]"
-      - run: pytest tests/ -v
+      - run: pytest tests/ -v --cov=lanis_mcp --cov-report=xml --cov-report=term
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          use_oidc: true
+          fail_ci_if_error: false
+          files: coverage.xml
 
   # The only test check the ruleset requires, whatever jobs are added later.
   required:
