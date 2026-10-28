@@ -4,6 +4,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Lint
@@ -27,9 +30,25 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: pytest tests/ -v
 
+  actions:
+    name: Actions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: actionlint shellcheck
+
+      # Also runs shellcheck over every `run:` block.
+      - name: actionlint
+        run: actionlint
+
   # The only test check the ruleset requires, whatever jobs are added later.
   required:
-    needs: [lint, test]
+    needs: [lint, test, actions]
     if: always()
     runs-on: ubuntu-latest
     steps:
