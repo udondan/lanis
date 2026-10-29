@@ -132,6 +132,14 @@ Fehler:
 - `ConfigurationError`: Die übergebenen Zugangsdaten sind unvollständig.
 - `SessionExpiredError`: Die Session ist abgelaufen (nur bei Anmeldung per Session-Cookie) und wurde zurückgesetzt.
 
+**Abhängigkeiten:** pylanis legt seine Abhängigkeiten auf exakte Versionen fest, damit Kommandozeile und MCP-Server nur mit getesteten Versionen laufen. Braucht dein Projekt eine andere Version, z. B. von `httpx`, kannst du die Vorgabe mit uv überschreiben:
+
+```toml
+# pyproject.toml deines Projekts
+[tool.uv]
+override-dependencies = ["httpx>=0.28"]
+```
+
 ---
 
 ## Kommandozeile
