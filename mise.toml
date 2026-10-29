@@ -42,11 +42,16 @@ run = "docker build -t mcp/lanis-mcp ."
 [tasks.docker-register]
 description = "Add the server to a Docker MCP Toolkit profile (created if missing)"
 usage = 'arg "[profile]" default="lanis" help="Profile ID"'
+# docker mcp only reads server files from its catalogs directory.
 run = """
+catalogs="$HOME/.docker/mcp/catalogs"
+mkdir -p "$catalogs"
+cp docker-mcp.yml "$catalogs/pylanis.yml"
+server="file://$catalogs/pylanis.yml"
 if docker mcp profile show "$usage_profile" >/dev/null 2>&1; then
-  docker mcp profile server add "$usage_profile" --server "file://{{config_root}}/docker-mcp.yml"
+  docker mcp profile server add "$usage_profile" --server "$server"
 else
-  docker mcp profile create --name "$usage_profile" --id "$usage_profile" --server "file://{{config_root}}/docker-mcp.yml"
+  docker mcp profile create --name "$usage_profile" --id "$usage_profile" --server "$server"
 fi
 """
 
