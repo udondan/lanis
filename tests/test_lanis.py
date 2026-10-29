@@ -217,6 +217,76 @@ class TestAuthentication:
 # ---------------------------------------------------------------------------
 
 
+class TestSubstitutionParsing:
+    """Unit tests for the monkey-patched _get_substitutions function."""
+
+    _INFO = {"date": "29.10.2026", "notice": "Info"}
+
+    def _response(self, payload: object) -> MagicMock:
+        response = MagicMock()
+        response.json.return_value = payload
+        return response
+
+    def test_substitutions_are_parsed(self):
+        """A list response is mapped to Substitution entries."""
+        from datetime import date
+
+        from lanis_mcp import client as client_module
+        import lanisapi.functions.substitution as substitution_module
+
+        entry = {
+            "Vertreter": "MÜL",
+            "Lehrer": "SCH",
+            "Stunde": "3",
+            "Klasse": "7b",
+            "Fach": "M",
+            "Raum": "A101",
+            "Hinweis": "",
+        }
+        with (
+            patch.object(
+                substitution_module, "_get_substitution_info", return_value=self._INFO
+            ),
+            patch.object(
+                client_module._Request, "post", return_value=self._response([entry])
+            ),
+        ):
+            plan = client_module._fixed_get_substitutions()
+
+        assert plan.date == date(2026, 10, 29)
+        assert plan.info == "Info"
+        assert len(plan.substitutions) == 1
+        sub = plan.substitutions[0]
+        assert (sub.class_name, sub.hours, sub.substitute) == ("7b", "3", "MÜL")
+        assert sub.notice is None
+
+    def test_response_without_list_raises_app_not_available(self):
+        """A number instead of a list means the school doesn't use the plan."""
+        from lanis_mcp import client as client_module
+        from lanisapi.exceptions import AppNotAvailableError
+        import lanisapi.functions.substitution as substitution_module
+
+        with (
+            patch.object(
+                substitution_module, "_get_substitution_info", return_value=self._INFO
+            ),
+            patch.object(
+                client_module._Request, "post", return_value=self._response(0)
+            ),
+        ):
+            with pytest.raises(AppNotAvailableError, match="no substitution data"):
+                client_module._fixed_get_substitutions()
+
+    def test_client_uses_patched_function(self):
+        """LanisClient.get_substitution_plan calls the patched function."""
+        from lanis_mcp import client as client_module
+        import lanisapi.client as lanisapi_client
+
+        assert (
+            lanisapi_client._get_substitutions is client_module._fixed_get_substitutions
+        )
+
+
 class TestSubstitutionPlan:
     def test_get_substitution_plan(self):
         """get_substitution_plan() returns a plan object."""
@@ -227,8 +297,12 @@ class TestSubstitutionPlan:
             pytest.skip("No substitution plan on weekends")
 
         from lanis_mcp.client import get_client
+        from lanisapi.exceptions import AppNotAvailableError
 
-        plan = get_client().get_substitution_plan()
+        try:
+            plan = get_client().get_substitution_plan()
+        except AppNotAvailableError:
+            pytest.skip("Vertretungsplan is not used at this school")
 
         assert plan is not None
         print(f"\n  Date: {plan.date}, substitutions: {len(plan.substitutions or [])}")
@@ -252,6 +326,8 @@ class TestSubstitutionPlan:
             loop.close()
 
         assert isinstance(result, str)
+        if "AppNotAvailableError" in result:
+            pytest.skip("Vertretungsplan is not used at this school")
         assert not result.startswith("Error:"), f"Tool returned error: {result}"
         print(f"\n  Preview: {result[:200]}")
 
