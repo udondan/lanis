@@ -46,8 +46,8 @@ usage = 'arg "[profile]" default="lanis" help="Profile ID"'
 run = """
 catalogs="$HOME/.docker/mcp/catalogs"
 mkdir -p "$catalogs"
-cp docker-mcp.yml "$catalogs/pylanis.yml"
-server="file://$catalogs/pylanis.yml"
+cp docker-mcp.yml "$catalogs/lanis.yml"
+server="file://$catalogs/lanis.yml"
 if docker mcp profile show "$usage_profile" >/dev/null 2>&1; then
   docker mcp profile server add "$usage_profile" --server "$server"
 else

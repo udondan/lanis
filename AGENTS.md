@@ -3,7 +3,7 @@
 This package gives access to the German school portal "Schulportal Hessen (Lanis)" in three ways:
 a Python SDK (`from pylanis import Lanis`), a command line tool (`lanis`) and an MCP
 (Model Context Protocol) server (`lanis mcp`, built on the MCP Python SDK's MCPServer).
-It is published on PyPI as `pylanis` (repo `udondan/pylanis`).
+It is published on PyPI as `pylanis` (repo `udondan/lanis`).
 
 ## Project Layout
 

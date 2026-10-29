@@ -11,7 +11,7 @@ from .exceptions import LanisError, LoginPageRedirectError, PageNotFoundError
 
 LOGGER = logging.getLogger(__name__)
 
-DEFAULT_USER_AGENT = "pylanis (https://github.com/udondan/pylanis)"
+DEFAULT_USER_AGENT = "pylanis (https://github.com/udondan/lanis)"
 DEFAULT_TIMEOUT = httpx.Timeout(30.0, connect=60.0)
 
 

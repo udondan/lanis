@@ -1,15 +1,15 @@
-# pylanis
+# lanis
 
 [![PyPI](https://img.shields.io/pypi/v/pylanis)](https://pypi.org/project/pylanis/)
 [![Docker](https://img.shields.io/docker/v/udondan/lanis?sort=semver&label=docker)](https://hub.docker.com/r/udondan/lanis)
 [![Python](https://img.shields.io/pypi/pyversions/pylanis)](https://pypi.org/project/pylanis/)
-[![CI](https://github.com/udondan/pylanis/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/udondan/pylanis/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/udondan/pylanis/graph/badge.svg)](https://codecov.io/gh/udondan/pylanis)
-[![License](https://img.shields.io/github/license/udondan/pylanis)](LICENSE)
+[![CI](https://github.com/udondan/lanis/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/udondan/lanis/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/udondan/lanis/graph/badge.svg)](https://codecov.io/gh/udondan/lanis)
+[![License](https://img.shields.io/github/license/udondan/lanis)](LICENSE)
 
 Zugriff auf das **[Schulportal Hessen (Lanis)](https://start.schulportal.hessen.de/)** aus Python, aus dem Terminal und aus KI-Assistenten: Vertretungsplan, Stundenplan, Kalender, Hausaufgaben, Nachrichten, Dateien und mehr.
 
-pylanis ist ein Paket mit drei gleichwertigen Zugängen zu denselben Daten:
+lanis bietet drei gleichwertige Zugänge zu denselben Daten:
 
 | Zugang                          | Für                                           | Start                       |
 | ------------------------------- | --------------------------------------------- | --------------------------- |
@@ -17,13 +17,13 @@ pylanis ist ein Paket mit drei gleichwertigen Zugängen zu denselben Daten:
 | [Kommandozeile](#kommandozeile) | das Terminal und Shell-Skripte (JSON-Ausgabe) | `lanis <befehl>`            |
 | [MCP-Server](#mcp-server)       | KI-Assistenten wie Claude                     | `lanis mcp`                 |
 
-pylanis liest nur. Es verändert keine Daten im Schulportal.
+lanis liest nur. Es verändert keine Daten im Schulportal.
 
 ---
 
 ## Installation
 
-pylanis braucht Python 3.11 oder neuer und wird auf [PyPI](https://pypi.org/project/pylanis/) veröffentlicht.
+Das Paket `pylanis` braucht Python 3.11 oder neuer und wird auf [PyPI](https://pypi.org/project/pylanis/) veröffentlicht.
 
 ```bash
 # Als Bibliothek in einem Projekt
@@ -48,7 +48,7 @@ Die Images sind mit [cosign](https://github.com/sigstore/cosign) signiert. So pr
 
 ```bash
 cosign verify udondan/lanis:latest \
-  --certificate-identity-regexp '^https://github\.com/udondan/pylanis/\.github/workflows/publish\.yml@refs/tags/v' \
+  --certificate-identity-regexp '^https://github\.com/udondan/(py)?lanis/\.github/workflows/publish\.yml@refs/tags/v' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
@@ -70,7 +70,7 @@ Es gibt drei Arten, sich anzumelden. Das SDK nimmt die Zugangsdaten als Paramete
 | Schule nach Name & Stadt            | `LANIS_SCHOOL_NAME`, `LANIS_SCHOOL_CITY`, `LANIS_USERNAME`, `LANIS_PASSWORD` | `school_name`, `school_city`, `username`, `password` |
 | Session-Cookie (kein Passwort)      | `LANIS_SCHOOL_ID`, `LANIS_SESSION_ID`                                        | `school_id`, `session_id`                            |
 
-Mit Benutzername und Passwort meldet sich pylanis automatisch neu an, wenn die Session abläuft. Ein Session-Cookie läuft irgendwann ab und muss dann ersetzt werden.
+Mit Benutzername und Passwort meldet sich lanis automatisch neu an, wenn die Session abläuft. Ein Session-Cookie läuft irgendwann ab und muss dann ersetzt werden.
 
 **Session speichern (optional):** Mit `LANIS_DATA_DIR` (SDK: `data_dir`) wird die Session in `session.json` in diesem Verzeichnis gespeichert, sodass nach einem Neustart keine neue Anmeldung nötig ist. Die Datei ist nur für dich lesbar. Ohne diese Einstellung bleibt die Session nur im Speicher.
 
@@ -244,12 +244,12 @@ Voraussetzung: Docker Desktop mit aktiviertem MCP Toolkit.
 
    ```bash
    mkdir -p ~/.docker/mcp/catalogs
-   curl -fsSL https://raw.githubusercontent.com/udondan/pylanis/main/docker-mcp.yml -o ~/.docker/mcp/catalogs/pylanis.yml
+   curl -fsSL https://raw.githubusercontent.com/udondan/lanis/main/docker-mcp.yml -o ~/.docker/mcp/catalogs/lanis.yml
 
    # neues Profil "lanis" ...
-   docker mcp profile create --name lanis --id lanis --server "file://$HOME/.docker/mcp/catalogs/pylanis.yml"
+   docker mcp profile create --name lanis --id lanis --server "file://$HOME/.docker/mcp/catalogs/lanis.yml"
    # ... oder zu einem bestehenden Profil hinzufügen
-   docker mcp profile server add default --server "file://$HOME/.docker/mcp/catalogs/pylanis.yml"
+   docker mcp profile server add default --server "file://$HOME/.docker/mcp/catalogs/lanis.yml"
    ```
 
    Das Profil hält das Image auf dem Stand, den es beim Hinzufügen hatte. Für ein Update `profile server add` erneut ausführen.
@@ -284,7 +284,7 @@ Antworten sind auf **25.000 Zeichen** begrenzt. Längere Ergebnisse werden gekü
 
 ### Session abgelaufen
 
-Betrifft nur die Anmeldung per Session-Cookie, mit Benutzername und Passwort meldet sich pylanis selbst neu an. Einen neuen Session-Cookie eintragen oder auf Benutzername und Passwort wechseln.
+Betrifft nur die Anmeldung per Session-Cookie, mit Benutzername und Passwort meldet sich lanis selbst neu an. Einen neuen Session-Cookie eintragen oder auf Benutzername und Passwort wechseln.
 
 ### App an der Schule nicht verfügbar
 
@@ -292,7 +292,7 @@ Nicht alle Schulen haben alle Lanis-Module aktiviert. `lanis available-apps` (bz
 
 ### Kein Vertretungsplan
 
-Den Vertretungsplan gibt es nur an Schultagen, nicht an Wochenenden und Feiertagen. Manche Schulen zeigen die App „Vertretungsplan" an, nutzen sie aber nicht. Dann meldet pylanis, dass keine Vertretungsdaten vorliegen.
+Den Vertretungsplan gibt es nur an Schultagen, nicht an Wochenenden und Feiertagen. Manche Schulen zeigen die App „Vertretungsplan" an, nutzen sie aber nicht. Dann meldet lanis, dass keine Vertretungsdaten vorliegen.
 
 ### Keine Termine gefunden
 
@@ -306,6 +306,6 @@ Prüfe die Zugangsdaten (beim MCP-Server die Umgebungsvariablen in der Client-Ko
 
 ## Lizenz
 
-pylanis steht unter der [MIT-Lizenz](LICENSE).
+lanis steht unter der [MIT-Lizenz](LICENSE).
 
 Der Ordner [`src/pylanis/lanisapi/`](src/pylanis/lanisapi/) basiert auf [LanisAPI](https://github.com/lanis-mobile/LanisAPI) 0.4.1 von Dacjan Gapinski. Das Projekt wird nicht mehr weiterentwickelt; der Code wurde überarbeitet und wird hier gepflegt. LanisAPI steht ebenfalls unter der MIT-Lizenz, siehe [`src/pylanis/lanisapi/LICENSE`](src/pylanis/lanisapi/LICENSE).

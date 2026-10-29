@@ -36,9 +36,9 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/udondan/pylanis"
-Issues = "https://github.com/udondan/pylanis/issues"
-Changelog = "https://github.com/udondan/pylanis/blob/main/CHANGELOG.md"
+Repository = "https://github.com/udondan/lanis"
+Issues = "https://github.com/udondan/lanis/issues"
+Changelog = "https://github.com/udondan/lanis/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
