@@ -9,7 +9,7 @@ RUN pip install --no-cache-dir --prefix=/install .
 FROM python:3.14-alpine
 
 LABEL com.docker.desktop.mcp="true"
-LABEL com.docker.desktop.mcp.name="lanis-mcp"
+LABEL com.docker.desktop.mcp.name="lanis"
 
 COPY --from=builder /install /usr/local
 

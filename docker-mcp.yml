@@ -1,20 +1,20 @@
 # Server definition for the Docker MCP Toolkit.
 # Add it to a profile with `mise run docker-register` (see README, section Docker MCP Toolkit).
-name: lanis-mcp
+name: lanis
 type: server
 image: udondan/lanis:latest
 title: Lanis (Schulportal Hessen)
 description: Vertretungsplan, Stundenplan, Kalender, Aufgaben, Nachrichten und Dateien aus dem Schulportal Hessen (Lanis)
 secrets:
-  - name: lanis-mcp.school_id
+  - name: lanis.school_id
     env: LANIS_SCHOOL_ID
     example: "1234"
     description: Schul-ID
-  - name: lanis-mcp.username
+  - name: lanis.username
     env: LANIS_USERNAME
     example: vorname.nachname
     description: Lanis-Benutzername
-  - name: lanis-mcp.password
+  - name: lanis.password
     env: LANIS_PASSWORD
     example: dein-passwort
     description: Lanis-Passwort
