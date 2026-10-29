@@ -13,9 +13,15 @@ LABEL com.docker.desktop.mcp.name="lanis-mcp"
 
 COPY --from=builder /install /usr/local
 
+# pip isn't needed at runtime, and its vendored copies of urllib3, msgpack
+# and setuptools show up in vulnerability scans. apk upgrade pulls fixes for
+# Alpine packages released after the base image.
 # /data is owned by the unprivileged user, so a volume mounted there for
 # LANIS_DATA_DIR is writable.
-RUN adduser -D -H -u 10001 lanis && mkdir /data && chown lanis:lanis /data
+RUN apk upgrade --no-cache \
+    && python -m pip uninstall -y pip \
+    && rm -rf /usr/local/lib/python3.*/ensurepip \
+    && adduser -D -H -u 10001 lanis && mkdir /data && chown lanis:lanis /data
 USER lanis
 
 # `docker run udondan/lanis <command>` runs the CLI; without a command the
