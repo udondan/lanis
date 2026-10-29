@@ -2,8 +2,8 @@
 
 import pytest
 
-from lanis_mcp.lanisapi import App, Folder
-from lanis_mcp.lanisapi.apps import detect_supported_apps, parse_apps, parse_folders
+from pylanis.lanisapi import App, Folder
+from pylanis.lanisapi.apps import detect_supported_apps, parse_apps, parse_folders
 
 from .support import APPS_DATA
 

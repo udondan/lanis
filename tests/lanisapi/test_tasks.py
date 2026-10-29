@@ -5,8 +5,8 @@ from datetime import datetime
 
 import pytest
 
-from lanis_mcp.lanisapi.session import LanisSession
-from lanis_mcp.lanisapi.tasks import fetch_page, parse_tasks
+from pylanis.lanisapi.session import LanisSession
+from pylanis.lanisapi.tasks import fetch_page, parse_tasks
 
 from .support import Router, fixture_text, respond
 
@@ -32,7 +32,7 @@ def test_only_current_tasks():
 
 
 def test_sparse_task_logs_warnings(caplog: pytest.LogCaptureFixture):
-    with caplog.at_level(logging.WARNING, logger="lanis_mcp.lanisapi.tasks"):
+    with caplog.at_level(logging.WARNING, logger="pylanis.lanisapi.tasks"):
         task = parse_tasks(fixture_text("meinunterricht.html"))[1]
 
     assert task.subject_name == "Mathematik 7GA"

@@ -4,12 +4,13 @@ import base64
 import re
 
 import pytest
+from Cryptodome.Cipher import AES
 from Cryptodome.PublicKey import RSA
 
-from lanis_mcp.lanisapi import cryption
-from lanis_mcp.lanisapi.cryption import Cryptor, decrypt, encrypt
-from lanis_mcp.lanisapi.exceptions import CryptionError, NotAuthenticatedError
-from lanis_mcp.lanisapi.session import LanisSession
+from pylanis.lanisapi import cryption
+from pylanis.lanisapi.cryption import Cryptor, decrypt, encrypt
+from pylanis.lanisapi.exceptions import CryptionError, NotAuthenticatedError
+from pylanis.lanisapi.session import LanisSession
 
 from .support import AJAX, Router, add_handshake
 
@@ -40,6 +41,15 @@ def test_encrypt_uses_random_salt():
 def test_wrong_passphrase_fails():
     with pytest.raises(CryptionError):
         decrypt(encrypt("Hallo Lanis, das ist ein Test", "richtig"), "falsch")
+
+
+def test_rejects_decrypted_data_that_is_not_utf8():
+    salt = bytes(8)
+    key_iv = cryption._bytes_to_key(b"k", salt)
+    aes = AES.new(key_iv[:32], AES.MODE_CBC, key_iv[32:])
+    raw = cryption._SALTED + salt + aes.encrypt(cryption._pad(b"\xff\xfe"))
+    with pytest.raises(CryptionError, match="Could not decrypt"):
+        decrypt(base64.b64encode(raw).decode(), "k")
 
 
 def test_rejects_data_without_salted_prefix():

@@ -3,12 +3,12 @@
 import httpx
 import pytest
 
-from lanis_mcp.lanisapi.exceptions import (
+from pylanis.lanisapi.exceptions import (
     LanisError,
     LoginPageRedirectError,
     PageNotFoundError,
 )
-from lanis_mcp.lanisapi.session import DEFAULT_USER_AGENT, LanisSession, is_login_page
+from pylanis.lanisapi.session import DEFAULT_USER_AGENT, LanisSession, is_login_page
 
 from .support import LOGIN_PAGE, Router, respond
 

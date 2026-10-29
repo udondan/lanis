@@ -1,7 +1,7 @@
 """Tests for the school list."""
 
-from lanis_mcp.lanisapi import SchoolInfo, list_schools
-from lanis_mcp.lanisapi.schools import parse_schools
+from pylanis.lanisapi import SchoolInfo, list_schools
+from pylanis.lanisapi.schools import parse_schools
 
 from .support import Router
 

@@ -2,14 +2,14 @@
 
 from datetime import datetime
 
-from lanis_mcp.lanisapi.calendar import (
+from pylanis.lanisapi.calendar import (
     fetch_event_responsible,
     fetch_events,
     month_range,
     parse_calendar,
     parse_event,
 )
-from lanis_mcp.lanisapi.session import LanisSession
+from pylanis.lanisapi.session import LanisSession
 
 from .support import Router, form
 

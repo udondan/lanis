@@ -8,7 +8,7 @@ import httpx
 import pytest
 from Cryptodome.PublicKey import RSA
 
-from lanis_mcp.lanisapi import (
+from pylanis.lanisapi import (
     AppNotAvailableError,
     LanisAccount,
     LanisClient,
@@ -17,8 +17,8 @@ from lanis_mcp.lanisapi import (
     MemorySessionStore,
     NotAuthenticatedError,
 )
-from lanis_mcp.lanisapi.models import Event
-from lanis_mcp.lanisapi.store import StoredSession, account_key
+from pylanis.lanisapi.models import Event
+from pylanis.lanisapi.store import StoredSession, account_key
 
 from .support import (
     ACCOUNT,

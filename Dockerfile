@@ -13,4 +13,4 @@ LABEL com.docker.desktop.mcp.name="lanis-mcp"
 
 COPY --from=builder /install /usr/local
 
-CMD ["lanis-mcp"]
+CMD ["lanis", "mcp"]

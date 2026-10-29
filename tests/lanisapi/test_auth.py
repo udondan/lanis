@@ -3,14 +3,14 @@
 import httpx
 import pytest
 
-from lanis_mcp.lanisapi.auth import find_cookie, find_school, login, resolve_school_id
-from lanis_mcp.lanisapi.exceptions import (
+from pylanis.lanisapi.auth import find_cookie, find_school, login, resolve_school_id
+from pylanis.lanisapi.exceptions import (
     AuthenticationError,
     NoSchoolFoundError,
     WrongCredentialsError,
 )
-from lanis_mcp.lanisapi.models import School, SchoolInfo
-from lanis_mcp.lanisapi.session import LanisSession
+from pylanis.lanisapi.models import School, SchoolInfo
+from pylanis.lanisapi.session import LanisSession
 
 from .support import SCHOOL_ID, SESSION_ID, Router, add_login, form, respond
 

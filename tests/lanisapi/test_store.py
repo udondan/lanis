@@ -7,13 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from lanis_mcp.lanisapi import (
+from pylanis.lanisapi import (
     FileSessionStore,
     LanisAccount,
     MemorySessionStore,
     School,
 )
-from lanis_mcp.lanisapi.store import StoredSession, account_key
+from pylanis.lanisapi.store import StoredSession, account_key
 
 KEY = account_key(LanisAccount("1234", "max", "pw"))
 
@@ -103,7 +103,7 @@ class TestFileSessionStore:
         def fail(*args: object) -> None:
             raise OSError("disk full")
 
-        monkeypatch.setattr("lanis_mcp.lanisapi.store.os.replace", fail)
+        monkeypatch.setattr("pylanis.lanisapi.store.os.replace", fail)
         with pytest.raises(OSError):
             FileSessionStore(tmp_path / "session.json").save(stored())
         assert list(tmp_path.iterdir()) == []

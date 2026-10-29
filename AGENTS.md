@@ -1,17 +1,22 @@
 # AGENTS.md — Developer & Agent Guide
 
-This is a Python MCP (Model Context Protocol) server that exposes the German school
-portal "Schulportal Hessen (Lanis)" as LLM-callable tools via the MCP Python SDK (MCPServer).
-It is published on PyPI as `pylanis` (repo `udondan/pylanis`); the console script and the
-import package keep the names `lanis-mcp` and `lanis_mcp`.
+This package gives access to the German school portal "Schulportal Hessen (Lanis)" in three ways:
+a Python SDK (`from pylanis import Lanis`), a command line tool (`lanis`) and an MCP
+(Model Context Protocol) server (`lanis mcp`, built on the MCP Python SDK's MCPServer).
+It is published on PyPI as `pylanis` (repo `udondan/pylanis`).
 
 ## Project Layout
 
-```
-src/lanis_mcp/
-  __init__.py      # package marker
-  client.py        # LanisClient singleton: lazy init, auth, session store
-  server.py        # MCPServer: all @mcp.tool definitions + shared helpers
+```text
+src/pylanis/
+  __init__.py      # public API: Lanis, models, errors, __version__
+  errors.py        # LanisError, ConfigurationError, SessionExpiredError
+  models.py        # dataclasses returned by the SDK
+  parsers.py       # pure HTML -> model functions for scraped pages (no HTTP)
+  client.py        # the Lanis class: credentials, session, one method per data type
+  formatting.py    # View objects: JSON data + markdown renderer, shared by CLI and MCP
+  mcp.py           # MCPServer with all @mcp.tool definitions, create_server()/run_server()
+  cli.py           # argparse CLI: main() for `lanis`
   lanisapi/        # Lanis library, based on LanisAPI 0.4.1 (MIT), keep its LICENSE
     client.py      #   LanisClient facade: caches, re-login when the session ends
     session.py     #   LanisSession: one httpx.Client, login page detection
@@ -22,11 +27,17 @@ src/lanis_mcp/
     apps.py, calendar.py, conversations.py, schools.py, substitution.py, tasks.py
                    #   one module per Lanis app: fetch_*(session, ...) and pure parse_*(raw)
 tests/
+  conftest.py      # make_lanis() and the `portal` fixture
+  fakes.py         # fake LanisClient and fake portal pages
+  data/mcp_golden.json  # recorded MCP tool output that must not change
   lanisapi/        # offline tests of the library (httpx.MockTransport, no account needed)
-  test_client.py   # offline tests of the MCP client wrapper
-  test_lanis.py    # integration tests (require live credentials)
+  test_sdk.py, test_parsers.py, test_mcp.py, test_cli.py
+  test_live.py     # live tests (require credentials, skip without them)
 pyproject.toml     # single source of truth for build, deps, and tool config
 ```
+
+Data flow: CLI / MCP -> `Lanis` (client.py) -> lanisapi + `parsers.py` -> models ->
+`formatting.py` views -> JSON or markdown.
 
 ## Environment Setup
 
@@ -44,7 +55,7 @@ python -m venv .venv
 .venv/bin/pip install -e ".[dev]"
 ```
 
-Required environment variables (set before running server or tests):
+Environment variables read by `Lanis.from_env()` (used by the CLI, the MCP server and the live tests):
 
 ```bash
 # Option 1 – username/password
@@ -72,7 +83,8 @@ export LANIS_DATA_DIR=...
 | Task           | mise shortcut      | Raw command                     |
 | -------------- | ------------------ | ------------------------------- |
 | Bootstrap venv | `mise run setup`   | `python -m venv .venv && ...`   |
-| Run MCP server | `mise run server`  | `.venv/bin/lanis-mcp`           |
+| Run MCP server | `mise run server`  | `.venv/bin/lanis mcp`           |
+| Run CLI        |                    | `.venv/bin/lanis --help`        |
 | Build wheel    | `mise run build`   | `.venv/bin/python -m build`     |
 | Lint           | `mise run lint`    | `.venv/bin/ruff check src/ tests/` |
 | Format         | `mise run format`  | `.venv/bin/ruff format src/ tests/` |
@@ -81,33 +93,38 @@ export LANIS_DATA_DIR=...
 
 There are two kinds of tests:
 
-- **Offline tests** (`tests/lanisapi/`, `tests/test_client.py`) answer the HTTP requests
-  with `httpx.MockTransport` (see `tests/lanisapi/support.py`) and need no account.
-  The HTML fixtures in `tests/lanisapi/fixtures/` are synthetic. The Vertretungsplan and
-  Nachrichten apps are tested only offline, because the test school does not use them.
-- **Integration tests** (`tests/test_lanis.py`) call the real Lanis API and require
-  credentials set in the environment. They skip when credentials are absent.
+- **Offline tests** need no account. `tests/test_sdk.py`, `test_parsers.py`, `test_mcp.py`
+  and `test_cli.py` run against the fakes in `tests/fakes.py`. `tests/lanisapi/` answers the
+  HTTP requests with `httpx.MockTransport` (see `tests/lanisapi/support.py`). The HTML
+  fixtures in `tests/lanisapi/fixtures/` are synthetic. The Vertretungsplan and Nachrichten
+  apps are tested only offline, because the test school does not use them.
+- **Live tests** (`tests/test_live.py`) call the real portal and skip when the `LANIS_*`
+  variables are missing.
+
+CI reports coverage to Codecov and fails pull requests that lower it, so new code needs unit tests.
 
 ```bash
 # Run all tests
 mise run test
 
 # Pass extra pytest args after --
-mise run test -- tests/test_lanis.py::TestAuthentication -v
-mise run test -- tests/test_lanis.py::TestSubstitutionPlan -v
-mise run test -- tests/test_lanis.py::TestCalendar -v
-mise run test -- tests/test_lanis.py::TestAuthentication::test_authenticate -v
-mise run test -- tests/test_lanis.py::TestSubstitutionPlan::test_get_substitution_plan_via_mcp_tool -v
+mise run test -- tests/test_mcp.py -v
+mise run test -- tests/test_cli.py::TestJson -v
+mise run test -- tests/test_live.py -v
 ```
 
 Without mise:
 
 ```bash
 .venv/bin/pytest tests/ -v
-.venv/bin/pytest tests/test_lanis.py::TestAuthentication -v
+.venv/bin/pytest tests/ --cov=pylanis --cov-report=term-missing
 ```
 
-Note: `TestSubstitutionPlan` tests skip automatically on weekends (no school plan).
+`tests/data/mcp_golden.json` holds the output of every MCP tool for the fake portal.
+`test_mcp.py` compares against it byte for byte, so MCP clients see no change when the
+code is refactored. Only update the file when a change to MCP output is intended.
+
+`test_substitution_plan` in the live tests skips on weekends (no school plan).
 
 ## Lint & Format Commands
 
@@ -135,18 +152,27 @@ Order imports in three groups separated by blank lines:
 
 1. Standard library (`os`, `json`, `datetime`, `enum`, `typing`)
 2. Third-party (`mcp`, `pydantic`, `httpx`)
-3. Local (`from lanis_mcp.client import ...`, `from lanis_mcp.lanisapi import ...`)
+3. Local (`from pylanis.client import ...`, `from pylanis.lanisapi import ...`)
 
 Use `import X as _X` for internal/private imports that should not
-be part of the public namespace (e.g., `import lanis_mcp.lanisapi.client as _lanisapi_client`).
+be part of the public namespace (e.g., `from pylanis.lanisapi import School as _LanisSchool`).
 
 ### Naming Conventions
 
 - `snake_case` for all functions, variables, and module names
 - `PascalCase` for Pydantic models and Enum classes (e.g., `CalendarInput`, `ResponseFormat`)
-- Private helpers and module-level singletons: prefix with `_` (e.g., `_client`, `_handle_error`, `_to_str`)
+- Private helpers and module-level state: prefix with `_` (e.g., `_active`, `_handle_error`, `_to_str`)
 - MCP tool functions: `lanis_<action>` (e.g., `lanis_get_tasks`, `lanis_get_calendar`) — this is the **Python function name**; the MCP `name=` string omits the `lanis_` prefix (see below)
 - Constants: `UPPER_SNAKE_CASE` (e.g., `CHARACTER_LIMIT = 25_000`)
+
+### Where Code Goes
+
+- Fetching data and turning lanisapi objects into models: `Lanis` in `client.py`
+- Parsing scraped HTML: `parsers.py` (pure functions, no HTTP)
+- Markdown/JSON output: `formatting.py` only; one `<thing>_view()` per data type
+- MCP and CLI only call `Lanis` and render views; they hold no parsing or formatting logic
+- A new data type usually needs: a model, a `Lanis` method, a view, an MCP tool and a CLI
+  subcommand, plus tests for each
 
 ### MCP Tool Pattern
 
@@ -180,9 +206,7 @@ async def lanis_<action>(
         - Returns "Error: ..." on specific failure modes
     """
     try:
-        client = get_client()
-        # ... fetch data ...
-        return _truncate(...)
+        return _render(formatting.<thing>_view(_lanis().get_<thing>()), response_format)
     except Exception as e:
         return _handle_error(e)
 ```
@@ -200,24 +224,27 @@ async def lanis_my_tool(params: MyToolInput) -> str: ...
 
 ### Error Handling
 
-- All tool handlers use a single top-level `try/except Exception as e` block
-- Always delegate to `_handle_error(e)` — never format errors inline
-- `_handle_error` detects `ForceNewAuthentication` and resets the cached client
-- Error strings always start with `"Error: "` (tools and helpers alike)
-- Empty-result returns use plain English: `"No tasks found."`, `"No events this month."`
-- Swallow exceptions silently only in cleanup paths (e.g., `reset_client` → `client.close()`)
+- The SDK raises exceptions: `ConfigurationError` for incomplete credentials,
+  `SessionExpiredError` after resetting an expired session
+- MCP tools use a single top-level `try/except Exception as e` block and delegate to
+  `_handle_error(e)`, which resets the client on an expired session
+- The CLI prints `Error: <message>` to stderr and exits with code 1
+- Error strings always start with `"Error: "`
+- Empty-result messages use plain English: `"No tasks found."`, `"No events this month."`
+- Swallow exceptions silently only in cleanup paths (e.g., `Lanis.reset()` -> `close()`)
 
 ### Output Formatting
 
-- All tool output is passed through `_truncate()` before returning
-- Use `_to_str(value)` whenever accessing fields from third-party API objects — never assume non-None
+- A `View` holds the JSON data, a markdown renderer and an optional empty-result message
+- MCP output goes through `truncate(view.render(fmt))`; CLI JSON prints `view.data` in full
+- Use `_to_str(value)` whenever accessing fields from lanisapi objects; never assume non-None
 - Markdown output uses `#`/`##`/`###` headings, `**Bold:**` labels, and `- ` list items
-- JSON output uses `json.dumps(data, indent=2, ensure_ascii=False)`
+- JSON output uses `to_json()` (`indent=2, ensure_ascii=False`)
 - Dates formatted as `YYYY-MM-DD`, datetimes as `YYYY-MM-DD HH:MM`
 
-### Section Dividers in server.py
+### Section Dividers
 
-Separate logical sections (one per tool or group) with a divider comment:
+Separate logical sections in `mcp.py` and `formatting.py` (one per tool or data type) with a divider comment:
 
 ```python
 # ---------------------------------------------------------------------------
@@ -251,13 +278,19 @@ Separate logical sections (one per tool or group) with a divider comment:
 
 ## Key Architectural Notes
 
-- `_client` in `client.py` is a module-level singleton; use `get_client()` and `reset_client()`
-- `src/lanis_mcp/lanisapi/` is based on the archived LanisAPI 0.4.1 (upstream tag `v0.4.1`,
+- `Lanis` logs in lazily on the first call that needs it; `reset()` drops the session
+- Each `Lanis` has its own `LanisClient` and HTTP session, so several accounts can be used in
+  one process
+- The MCP server holds one `Lanis` in `_active`; `_lanis()` falls back to `Lanis.from_env()`
+- `data_dir` (`LANIS_DATA_DIR`) keeps the session in `session.json` (`FileSessionStore`);
+  without it the session lives in memory only
+- `src/pylanis/lanisapi/` is based on the archived LanisAPI 0.4.1 (upstream tag `v0.4.1`,
   commit `a83151e`) and maintained here. It is MIT licensed by Dacjan Gapinski: keep
-  `src/lanis_mcp/lanisapi/LICENSE` and its entry in `license-files` in `pyproject.toml`
+  `src/pylanis/lanisapi/LICENSE` and its entry in `license-files` in `pyproject.toml`
 - The library never writes to the working directory and never prints: stdout belongs to
   the stdio MCP transport. Log with `logging.getLogger(__name__)` instead
 - A response that shows the Lanis login page raises `LoginPageRedirectError`.
-  `LanisClient` then logs in again once (account auth only); the raw page scrapes in
-  `server.py` go through `get_client().get_page()` to get the same behavior
-- `CHARACTER_LIMIT = 25_000` guards all responses; never bypass `_truncate()`
+  `LanisClient` then logs in again once (account auth only); the scraped pages in
+  `client.py` go through `LanisClient.get_page()` to get the same behavior. When it still
+  reaches `Lanis`, it becomes `SessionExpiredError`
+- `CHARACTER_LIMIT = 25_000` guards all MCP responses; never bypass `truncate()`

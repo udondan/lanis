@@ -6,13 +6,13 @@ from typing import Any
 import httpx
 import pytest
 
-from lanis_mcp.lanisapi.conversations import (
+from pylanis.lanisapi.conversations import (
     fetch_conversations,
     parse_conversation,
     parse_date,
 )
-from lanis_mcp.lanisapi.cryption import Cryptor
-from lanis_mcp.lanisapi.session import LanisSession
+from pylanis.lanisapi.cryption import Cryptor
+from pylanis.lanisapi.session import LanisSession
 
 from .support import Router, dumps, form
 

@@ -11,9 +11,9 @@ import pytest
 from Cryptodome.Cipher import PKCS1_v1_5
 from Cryptodome.PublicKey import RSA
 
-from lanis_mcp.lanisapi import LanisAccount, LanisClient, MemorySessionStore
-from lanis_mcp.lanisapi.cryption import encrypt
-from lanis_mcp.lanisapi.store import SessionStore
+from pylanis.lanisapi import LanisAccount, LanisClient, MemorySessionStore
+from pylanis.lanisapi.cryption import encrypt
+from pylanis.lanisapi.store import SessionStore
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

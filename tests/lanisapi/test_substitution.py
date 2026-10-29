@@ -4,12 +4,12 @@ from datetime import date
 
 import pytest
 
-from lanis_mcp.lanisapi.exceptions import (
+from pylanis.lanisapi.exceptions import (
     AppNotAvailableError,
     CriticalElementWasNotFoundError,
 )
-from lanis_mcp.lanisapi.session import LanisSession
-from lanis_mcp.lanisapi.substitution import (
+from pylanis.lanisapi.session import LanisSession
+from pylanis.lanisapi.substitution import (
     fetch_page,
     fetch_substitutions,
     parse_info,
