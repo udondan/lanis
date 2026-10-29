@@ -1,6 +1,7 @@
 """Lanis client wrapper with lazy initialization and session management."""
 
 import os
+from datetime import datetime
 from difflib import SequenceMatcher
 from typing import Optional
 
@@ -99,6 +100,59 @@ def _fixed_get_available_apps() -> list[str]:
 
 
 _lanisapi_apps._get_available_apps = _fixed_get_available_apps
+
+
+# ---------------------------------------------------------------------------
+# Monkey-patch: _get_substitutions — handle a plan without data
+# ---------------------------------------------------------------------------
+
+import lanisapi.functions.substitution as _lanisapi_substitution  # noqa: E402
+from lanisapi.exceptions import AppNotAvailableError  # noqa: E402
+
+
+def _fixed_get_substitutions() -> _lanisapi_substitution.SubstitutionPlan:
+    """Fixed version of lanisapi's _get_substitutions.
+
+    Schools can show the Vertretungsplan app on the dashboard without using it.
+    Lanis then answers with a number instead of a list of substitutions, which
+    the original iterates over and fails with a TypeError. This version raises
+    AppNotAvailableError instead.
+    """
+    info = _lanisapi_substitution._get_substitution_info()
+    response = _Request.post(
+        _lanisapi_substitution.URL.substitution_plan,
+        data={"ganzerPlan": "true", "tag": info["date"]},
+    )
+    raw = response.json()
+    if not isinstance(raw, list):
+        raise AppNotAvailableError(
+            f"The Vertretungsplan returned no substitution data (response: {raw!r}). "
+            "Your school probably does not use the Vertretungsplan app."
+        )
+
+    plan = _lanisapi_substitution.SubstitutionPlan(
+        datetime.strptime(info["date"], "%d.%m.%Y").date(), info["notice"], []
+    )
+    for entry in raw:
+        plan.substitutions.append(
+            _lanisapi_substitution.SubstitutionPlan.Substitution(
+                substitute=entry["Vertreter"],
+                teacher=entry["Lehrer"],
+                hours=entry["Stunde"],
+                class_name=entry["Klasse"],
+                subject=entry["Fach"],
+                room=entry["Raum"],
+                notice=entry["Hinweis"] if entry["Hinweis"] else None,
+            )
+        )
+
+    _LOGGER.info("Get substitution plan (patched): Success.")
+    return plan
+
+
+# LanisClient.get_substitution_plan resolves the function in lanisapi.client.
+_lanisapi_substitution._get_substitutions = _fixed_get_substitutions
+_lanisapi_client._get_substitutions = _fixed_get_substitutions
 
 
 _client: Optional[LanisClient] = None

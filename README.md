@@ -300,6 +300,8 @@ Nicht alle Schulen haben alle Lanis-Module aktiviert. Mit `get_available_apps` k
 
 Der Vertretungsplan ist nur an Schultagen verfügbar. An Wochenenden und Feiertagen gibt es keinen Plan.
 
+Manche Schulen zeigen die App „Vertretungsplan“ an, nutzen sie aber nicht. Dann meldet `get_substitution_plan`, dass keine Vertretungsdaten vorliegen.
+
 ### Keine Termine / Aufgaben gefunden
 
 Prüfe, ob du den richtigen Zeitraum angegeben hast. Für den Kalender müssen `start` und `end` im Format `JJJJ-MM-TT` angegeben werden.
