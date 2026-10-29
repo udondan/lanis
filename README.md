@@ -1,6 +1,7 @@
 # pylanis
 
 [![PyPI](https://img.shields.io/pypi/v/pylanis)](https://pypi.org/project/pylanis/)
+[![Docker](https://img.shields.io/docker/v/udondan/lanis?sort=semver&label=docker)](https://hub.docker.com/r/udondan/lanis)
 [![Python](https://img.shields.io/pypi/pyversions/pylanis)](https://pypi.org/project/pylanis/)
 [![CI](https://github.com/udondan/pylanis/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/udondan/pylanis/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/udondan/pylanis/graph/badge.svg)](https://codecov.io/gh/udondan/pylanis)
@@ -33,6 +34,22 @@ uv tool install pylanis    # oder: pipx install pylanis
 
 # Ohne Installation ausprobieren
 uvx --from pylanis lanis schools
+```
+
+Kommandozeile und MCP-Server gibt es auch als Docker-Image [`udondan/lanis`](https://hub.docker.com/r/udondan/lanis) (amd64 und arm64), ganz ohne Python:
+
+```bash
+docker run --rm udondan/lanis schools
+```
+
+Das Image führt den Befehl `lanis` aus. Ohne Argument startet es den MCP-Server.
+
+Die Images sind mit [cosign](https://github.com/sigstore/cosign) signiert. So prüfst du, dass ein Image vom Release-Workflow dieses Repositorys stammt:
+
+```bash
+cosign verify udondan/lanis:latest \
+  --certificate-identity-regexp '^https://github\.com/udondan/pylanis/\.github/workflows/publish\.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
 ---
@@ -134,6 +151,22 @@ lanis timetable | jq '.entries[] | select(.day == "Montag")'
 
 Alle Befehle stehen in der Tabelle [Verfügbare Daten](#verfügbare-daten). `lanis --help` und `lanis <befehl> --help` zeigen alle Optionen. Fehler werden als `Error: …` auf stderr ausgegeben, der Befehl endet dann mit Exit-Code 1.
 
+### Mit Docker
+
+`-e NAME` ohne Wert übernimmt die Variable aus deiner Shell:
+
+```bash
+docker run --rm -e LANIS_SCHOOL_ID -e LANIS_USERNAME -e LANIS_PASSWORD udondan/lanis substitutions
+```
+
+Damit nicht jeder Aufruf eine neue Anmeldung braucht, speichert ein Volume die Session (siehe [Anmeldung](#anmeldung)). Als Alias verhält sich das Image dann wie ein installiertes `lanis`:
+
+```bash
+alias lanis='docker run --rm -e LANIS_SCHOOL_ID -e LANIS_USERNAME -e LANIS_PASSWORD -e LANIS_DATA_DIR=/data -v lanis-data:/data udondan/lanis'
+
+lanis --format markdown tasks
+```
+
 ---
 
 ## MCP-Server
@@ -172,20 +205,54 @@ Füge einen Eintrag unter `mcpServers` hinzu. Die Umgebungsvariablen entsprechen
 
 Nach dem Speichern Claude Desktop neu starten.
 
+Mit Docker statt `uvx` sieht der Eintrag so aus. `-e NAME` ohne Wert reicht die Variable aus `env` an den Container weiter:
+
+```json
+{
+  "mcpServers": {
+    "lanis": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-e",
+        "LANIS_SCHOOL_ID",
+        "-e",
+        "LANIS_USERNAME",
+        "-e",
+        "LANIS_PASSWORD",
+        "udondan/lanis"
+      ],
+      "env": {
+        "LANIS_SCHOOL_ID": "1234",
+        "LANIS_USERNAME": "vorname.nachname",
+        "LANIS_PASSWORD": "dein-passwort"
+      }
+    }
+  }
+}
+```
+
 ### Docker MCP Toolkit
 
-Statt `uvx` kann der Server auch als Container hinter dem [Docker MCP Toolkit](https://docs.docker.com/ai/mcp-catalog-and-toolkit/toolkit/) laufen. Der MCP Gateway von Docker Desktop startet den Container bei Bedarf und reicht die Tools an die verbundenen Clients weiter. Die Zugangsdaten liegen dabei als Secrets in Docker Desktop statt im Klartext in der Client-Konfiguration.
+Mit dem [Docker MCP Toolkit](https://docs.docker.com/ai/mcp-catalog-and-toolkit/toolkit/) von Docker Desktop läuft der Server als Container hinter dem MCP Gateway. Der Gateway startet den Container bei Bedarf und reicht die Tools an die verbundenen Clients weiter. Die Zugangsdaten liegen dabei als Secrets in Docker Desktop statt im Klartext in der Client-Konfiguration.
 
-Voraussetzungen: Docker Desktop mit aktiviertem MCP Toolkit, [`mise`](https://mise.jdx.dev) und ein Klon dieses Repositorys. Ein fertiges Image gibt es nicht, es wird lokal gebaut.
+Voraussetzung: Docker Desktop mit aktiviertem MCP Toolkit.
 
-1. Image bauen und den Server zu einem Toolkit-Profil hinzufügen:
+1. Die Server-Definition [`docker-mcp.yml`](docker-mcp.yml) herunterladen und zu einem Toolkit-Profil hinzufügen. Das Toolkit liest solche Dateien nur aus seinem Katalog-Verzeichnis:
 
    ```bash
-   mise run docker                  # Image bauen und zum Profil "lanis" hinzufügen
-   mise run docker-register work    # zusätzlich zu einem anderen, auch bestehenden Profil
+   mkdir -p ~/.docker/mcp/catalogs
+   curl -fsSL https://raw.githubusercontent.com/udondan/pylanis/main/docker-mcp.yml -o ~/.docker/mcp/catalogs/pylanis.yml
+
+   # neues Profil "lanis" ...
+   docker mcp profile create --name lanis --id lanis --server "file://$HOME/.docker/mcp/catalogs/pylanis.yml"
+   # ... oder zu einem bestehenden Profil hinzufügen
+   docker mcp profile server add default --server "file://$HOME/.docker/mcp/catalogs/pylanis.yml"
    ```
 
-   Das Profil wird angelegt, falls es noch nicht existiert. Die Server-Definition steht in [`docker-mcp.yml`](docker-mcp.yml). Nach Änderungen am Code genügt es, den Befehl erneut auszuführen.
+   Das Profil hält das Image auf dem Stand, den es beim Hinzufügen hatte. Für ein Update `profile server add` erneut ausführen.
 
 2. Zugangsdaten als Secrets hinterlegen (siehe [Anmeldung](#anmeldung)):
 

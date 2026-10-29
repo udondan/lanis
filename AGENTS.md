@@ -80,14 +80,19 @@ export LANIS_DATA_DIR=...
 
 ## Build & Run Commands
 
-| Task           | mise shortcut      | Raw command                     |
-| -------------- | ------------------ | ------------------------------- |
-| Bootstrap venv | `mise run setup`   | `python -m venv .venv && ...`   |
-| Run MCP server | `mise run server`  | `.venv/bin/lanis mcp`           |
-| Run CLI        |                    | `.venv/bin/lanis --help`        |
-| Build wheel    | `mise run build`   | `.venv/bin/python -m build`     |
-| Lint           | `mise run lint`    | `.venv/bin/ruff check src/ tests/` |
-| Format         | `mise run format`  | `.venv/bin/ruff format src/ tests/` |
+| Task                              | mise shortcut                        | Raw command                         |
+| --------------------------------- | ------------------------------------ | ----------------------------------- |
+| Bootstrap venv                    | `mise run setup`                     | `python -m venv .venv && ...`       |
+| Run MCP server                    | `mise run server`                    | `.venv/bin/lanis mcp`               |
+| Run CLI                           |                                      | `.venv/bin/lanis --help`            |
+| Build wheel                       | `mise run build`                     | `.venv/bin/python -m build`         |
+| Lint                              | `mise run lint`                      | `.venv/bin/ruff check src/ tests/`  |
+| Format                            | `mise run format`                    | `.venv/bin/ruff format src/ tests/` |
+| Build image                       | `mise run docker-build`              | `docker build -t udondan/lanis .`   |
+| Add to Docker MCP Toolkit profile | `mise run docker-register [profile]` | see `mise.toml`                     |
+
+`mise run docker` does both. The local `udondan/lanis:latest` takes the place of the public
+image, so the Docker MCP Toolkit runs the local build. `docker pull udondan/lanis` switches back.
 
 ## Test Commands
 
@@ -272,7 +277,10 @@ Separate logical sections in `mcp.py` and `formatting.py` (one per tool or data 
   `pyproject.toml` and updates `CHANGELOG.md`. `feat:` and `fix:` commits trigger a release.
 - Every Monday the release PR is set to auto-merge. Merging it creates the GitHub release.
 - The release starts `publish.yml`, which builds the package and uploads it to PyPI as
-  `pylanis` via Trusted Publishing (GitHub environment `pypi`).
+  `pylanis` via Trusted Publishing (GitHub environment `pypi`). It also pushes the Docker image
+  `udondan/lanis` (amd64 and arm64, tags `x.y.z`, `x.y`, `x`, `latest`) with an access token
+  from the GitHub environment `docker-hub` (`DOCKERHUB_USERNAME` variable, `DOCKERHUB_TOKEN`
+  secret).
 - CI runs the live integration tests one run at a time (`udondan/wait-for-turn`),
   because all runs share one Lanis account.
 
