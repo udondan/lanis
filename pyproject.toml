@@ -13,11 +13,17 @@ license-files = ["LICENSE", "src/pylanis/lanisapi/LICENSE"]
 authors = [{ name = "Daniel Schroeder", email = "deemes79@googlemail.com" }]
 keywords = ["lanis", "schulportal", "hessen", "sdk", "cli", "mcp", "mcp-server", "school", "vertretungsplan"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
     "Intended Audience :: End Users/Desktop",
     "Natural Language :: German",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Education",
 ]
 requires-python = ">=3.11"
