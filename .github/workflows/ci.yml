@@ -186,7 +186,7 @@ jobs:
       - name: List tools through the gateway
         run: |
           docker mcp gateway run --profile ci --dry-run --verbose 2>&1 | tee gateway.log
-          grep -E "lanis-mcp: \([1-9][0-9]* tools\)" gateway.log
+          grep -E "lanis: \([1-9][0-9]* tools\)" gateway.log
 
   # The only test check the ruleset requires, whatever jobs are added later.
   required:

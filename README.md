@@ -257,9 +257,9 @@ Voraussetzung: Docker Desktop mit aktiviertem MCP Toolkit.
 2. Zugangsdaten als Secrets hinterlegen (siehe [Anmeldung](#anmeldung)):
 
    ```bash
-   docker mcp secret set lanis-mcp.school_id=1234
-   docker mcp secret set lanis-mcp.username=vorname.nachname
-   docker mcp secret set lanis-mcp.password=dein-passwort
+   docker mcp secret set lanis.school_id=1234
+   docker mcp secret set lanis.username=vorname.nachname
+   docker mcp secret set lanis.password=dein-passwort
    ```
 
 3. Einen Client mit dem Profil verbinden:
@@ -270,7 +270,7 @@ Voraussetzung: Docker Desktop mit aktiviertem MCP Toolkit.
 
    Weitere Clients wie `claude-code`, `cursor` oder `vscode` zeigt `docker mcp client connect --help`. Alternativ geht das in Docker Desktop unter _MCP Toolkit_.
 
-`docker mcp gateway run --profile lanis --dry-run --verbose` prüft die Einrichtung, ohne einen Client zu starten. Am Ende sollte `lanis-mcp: (15 tools)` stehen.
+`docker mcp gateway run --profile lanis --dry-run --verbose` prüft die Einrichtung, ohne einen Client zu starten. Am Ende sollte `lanis: (15 tools)` stehen.
 
 ### Ausgabe
 
