@@ -26,13 +26,53 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: ruff check src/ tests/
 
+  # All runs share one live Lanis account. Many parallel runs, for example of
+  # several Renovate PRs, would send bursts of logins that look suspicious, so
+  # only one run at a time may run the integration tests.
+  wait-for-turn:
+    name: Wait for turn
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      actions: read
+      contents: write # lock refs under refs/wait-for-turn/
+      pull-requests: read # labels for label-weights
+    # A new commit on the branch cancels the waiting of the outdated run, so the
+    # new run doesn't queue behind it. Once a run has the turn, this job is
+    # done: test jobs that already run are never cancelled.
+    concurrency:
+      group: test-wait-${{ github.head_ref || github.ref }}
+      cancel-in-progress: true
+    steps:
+      # Queue order: manual PRs first, then Renovate updates, then the
+      # release-please PR, which is updated after every merge to main anyway.
+      # Fails right away if the branch is behind main. Branch protection
+      # requires PRs to be up to date, so testing an outdated branch is wasted
+      # time: it has to be updated and tested again.
+      - name: Wait for turn
+        uses: udondan/wait-for-turn@2b462225964472d11c5cc4dea1b2375e6163a99d # v1.4.1
+        with:
+          require-up-to-date: true
+          label-weights: |
+            autorelease: pending=-10
+            renovate=-5
+
   test:
     name: Test
+    needs: [wait-for-turn]
+    # Pull requests from forks can't take the turn and skip the wait, as they
+    # don't get the secrets. Their integration tests are skipped.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write # Codecov upload via OIDC
     steps:
+      - name: Check turn
+        if: needs.wait-for-turn.result == 'failure' || needs.wait-for-turn.result == 'cancelled'
+        run: exit 1
+
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
@@ -41,6 +81,10 @@ jobs:
           python-version: "3.14"
       - run: pip install -e ".[dev]"
       - run: pytest tests/ -v --cov=lanis_mcp --cov-report=xml --cov-report=term
+        env:
+          LANIS_SCHOOL_ID: ${{ secrets.LANIS_SCHOOL_ID }}
+          LANIS_USERNAME: ${{ secrets.LANIS_USERNAME }}
+          LANIS_PASSWORD: ${{ secrets.LANIS_PASSWORD }}
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
@@ -108,7 +152,7 @@ jobs:
 
   # The only test check the ruleset requires, whatever jobs are added later.
   required:
-    needs: [lint, test, coverage, actions]
+    needs: [lint, wait-for-turn, test, coverage, actions]
     if: always()
     runs-on: ubuntu-latest
     steps:
