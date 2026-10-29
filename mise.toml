@@ -44,9 +44,9 @@ description = "Add the server to a Docker MCP Toolkit profile (created if missin
 usage = 'arg "[profile]" default="lanis" help="Profile ID"'
 run = """
 if docker mcp profile show "$usage_profile" >/dev/null 2>&1; then
-  docker mcp profile server add "$usage_profile" --server file://docker-mcp.yml
+  docker mcp profile server add "$usage_profile" --server "file://{{config_root}}/docker-mcp.yml"
 else
-  docker mcp profile create --name "$usage_profile" --id "$usage_profile" --server file://docker-mcp.yml
+  docker mcp profile create --name "$usage_profile" --id "$usage_profile" --server "file://{{config_root}}/docker-mcp.yml"
 fi
 """
 
