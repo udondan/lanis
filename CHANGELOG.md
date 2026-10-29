@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/udondan/pylanis/compare/v0.2.1...v1.0.0) (2026-10-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* add Python SDK and lanis CLI alongside the MCP server ([#46](https://github.com/udondan/pylanis/issues/46))
+
+### Features
+
+* add Python SDK and lanis CLI alongside the MCP server ([#46](https://github.com/udondan/pylanis/issues/46)) ([836d48f](https://github.com/udondan/pylanis/commit/836d48fcc1e3d417dec7055e61aefd6ce4975bf0))
+
 ## [0.2.1](https://github.com/udondan/pylanis/compare/v0.2.0...v0.2.1) (2026-10-29)
 
 
