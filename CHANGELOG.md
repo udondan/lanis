@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/udondan/lanis/compare/v1.1.0...v1.1.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* remove pip from the Docker image ([#53](https://github.com/udondan/lanis/issues/53)) ([2a9fa7a](https://github.com/udondan/lanis/commit/2a9fa7a71510f0126bd9295e583007072bfeb9a8))
+
 ## [1.1.0](https://github.com/udondan/pylanis/compare/v1.0.0...v1.1.0) (2026-10-29)
 
 
