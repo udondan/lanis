@@ -10,10 +10,20 @@ import package keep the names `lanis-mcp` and `lanis_mcp`.
 ```
 src/lanis_mcp/
   __init__.py      # package marker
-  client.py        # LanisClient singleton: lazy init, auth, session mgmt, monkey-patch
+  client.py        # LanisClient singleton: lazy init, auth, session store
   server.py        # MCPServer: all @mcp.tool definitions + shared helpers
-  lanisapi/        # vendored LanisAPI 0.4.1 (MIT, Dacjan Gapinski), keep its LICENSE
+  lanisapi/        # Lanis library, based on LanisAPI 0.4.1 (MIT), keep its LICENSE
+    client.py      #   LanisClient facade: caches, re-login when the session ends
+    session.py     #   LanisSession: one httpx.Client, login page detection
+    auth.py        #   login flow
+    cryption.py    #   AES/RSA handshake for the Nachrichten app
+    store.py       #   MemorySessionStore, FileSessionStore
+    models.py      #   dataclasses
+    apps.py, calendar.py, conversations.py, schools.py, substitution.py, tasks.py
+                   #   one module per Lanis app: fetch_*(session, ...) and pure parse_*(raw)
 tests/
+  lanisapi/        # offline tests of the library (httpx.MockTransport, no account needed)
+  test_client.py   # offline tests of the MCP client wrapper
   test_lanis.py    # integration tests (require live credentials)
 pyproject.toml     # single source of truth for build, deps, and tool config
 ```
@@ -51,6 +61,10 @@ export LANIS_SCHOOL_NAME=...
 export LANIS_SCHOOL_CITY=...
 export LANIS_USERNAME=...
 export LANIS_PASSWORD=...
+
+# Optional – keep the session in $LANIS_DATA_DIR/session.json (mode 0600)
+# so a restart needs no new login. Without it the session stays in memory.
+export LANIS_DATA_DIR=...
 ```
 
 ## Build & Run Commands
@@ -65,8 +79,14 @@ export LANIS_PASSWORD=...
 
 ## Test Commands
 
-Tests are **integration tests only** — they call the real Lanis API and require
-credentials set in the environment. Tests gracefully skip when credentials are absent.
+There are two kinds of tests:
+
+- **Offline tests** (`tests/lanisapi/`, `tests/test_client.py`) answer the HTTP requests
+  with `httpx.MockTransport` (see `tests/lanisapi/support.py`) and need no account.
+  The HTML fixtures in `tests/lanisapi/fixtures/` are synthetic. The Vertretungsplan and
+  Nachrichten apps are tested only offline, because the test school does not use them.
+- **Integration tests** (`tests/test_lanis.py`) call the real Lanis API and require
+  credentials set in the environment. They skip when credentials are absent.
 
 ```bash
 # Run all tests
@@ -232,10 +252,12 @@ Separate logical sections (one per tool or group) with a divider comment:
 ## Key Architectural Notes
 
 - `_client` in `client.py` is a module-level singleton; use `get_client()` and `reset_client()`
-- `src/lanis_mcp/lanisapi/` is a copy of the archived LanisAPI 0.4.1 (upstream tag `v0.4.1`,
-  commit `a83151e`). It is MIT licensed by Dacjan Gapinski: keep `src/lanis_mcp/lanisapi/LICENSE`
-  and its entry in `license-files` in `pyproject.toml`
-- `client.py` monkey-patches `lanis_mcp.lanisapi` at import time to fix a cookie-parsing bug — do not remove
-- `tests/test_lanis.py` calls `os.chdir()` at module load time (before any imports) so that
-  `lanisapi`'s `session.json` is written to a temp directory instead of the project root
+- `src/lanis_mcp/lanisapi/` is based on the archived LanisAPI 0.4.1 (upstream tag `v0.4.1`,
+  commit `a83151e`) and maintained here. It is MIT licensed by Dacjan Gapinski: keep
+  `src/lanis_mcp/lanisapi/LICENSE` and its entry in `license-files` in `pyproject.toml`
+- The library never writes to the working directory and never prints: stdout belongs to
+  the stdio MCP transport. Log with `logging.getLogger(__name__)` instead
+- A response that shows the Lanis login page raises `LoginPageRedirectError`.
+  `LanisClient` then logs in again once (account auth only); the raw page scrapes in
+  `server.py` go through `get_client().get_page()` to get the same behavior
 - `CHARACTER_LIMIT = 25_000` guards all responses; never bypass `_truncate()`

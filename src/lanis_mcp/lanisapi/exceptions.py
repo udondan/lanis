@@ -1,33 +1,41 @@
-"""Here are all all Lanis- and lib-related Exceptions."""
+"""Exceptions raised by the Lanis library."""
 
 
-class PageNotFoundError(Exception):
-    """Returned if Lanis couldn't find the page (404)."""
+class LanisError(Exception):
+    """Base class of all errors raised by this library."""
 
 
-class LoginPageRedirectError(Exception):
-    """Returned if Lanis returned the login page."""
+class PageNotFoundError(LanisError):
+    """Lanis answered with 404."""
 
 
-class NotAuthenticatedError(Exception):
-    """Returned if ``LanisClient`` or ``Cryptor`` wasn't authenticated yet."""
+class LoginPageRedirectError(LanisError):
+    """Lanis answered with the login page, so the session is over."""
 
 
-class AppNotAvailableError(Exception):
-    """Returned if you tried to access a not supported applet by your school."""
+class NotAuthenticatedError(LanisError):
+    """The client was used before ``authenticate()``."""
 
 
-class CriticalElementWasNotFoundError(Exception):
-    """Returned if a critical html element was not found."""
+class AuthenticationError(LanisError):
+    """The login flow did not produce a session."""
 
 
-class WrongCredentialsError(Exception):
-    """Returned if you passed a wrong password or username."""
+class WrongCredentialsError(AuthenticationError):
+    """The username or password is wrong."""
 
 
-class NoSchoolFoundError(Exception):
-    """Returned if no school was found using the ``School`` params."""
+class NoSchoolFoundError(AuthenticationError):
+    """No school matches the given name and city."""
 
 
-class ForceNewAuthenticationError(Exception):
-    """Thrown if we need to make a completely new session. Usually it is not thrown outside of the lib."""
+class AppNotAvailableError(LanisError):
+    """The school does not offer the requested Lanis app."""
+
+
+class CriticalElementWasNotFoundError(LanisError):
+    """An HTML element the parser depends on is missing."""
+
+
+class CryptionError(LanisError):
+    """The encryption handshake with Lanis failed."""
