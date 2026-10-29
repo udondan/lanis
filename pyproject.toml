@@ -25,10 +25,8 @@ dependencies = [
     "mcp[cli]==2.3.0",
     # Dependencies of the vendored LanisAPI (src/lanis_mcp/lanisapi/).
     "httpx==0.28.1",
-    "py-machineid==1.0.0",
     "pycryptodomex==3.24.1",
-    # The vendored LanisAPI imports selectolax.parser, which selectolax 1.0 removed.
-    "selectolax==0.4.13",
+    "selectolax==1.0.2",
 ]
 
 [project.urls]
@@ -64,8 +62,3 @@ select = ["E4", "E7", "E9", "F"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-filterwarnings = [
-    # The vendored LanisAPI passes cookies per request to httpx, which newer httpx
-    # versions deprecate.
-    "ignore::DeprecationWarning:httpx",
-]

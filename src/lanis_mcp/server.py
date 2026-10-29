@@ -25,10 +25,9 @@ from typing import Any, Optional
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field, ConfigDict
-from selectolax.parser import HTMLParser as _HTMLParser
+from selectolax.lexbor import LexborHTMLParser as _HTMLParser
 
-import lanis_mcp.lanisapi.functions.schools as _lanisapi_schools
-from lanis_mcp.lanisapi.helpers.request import Request as _Request
+from lanis_mcp.lanisapi import LoginPageRedirectError, list_schools
 from lanis_mcp.client import get_client, reset_client
 
 _LANIS_BASE = "https://start.schulportal.hessen.de"
@@ -53,7 +52,9 @@ class ResponseFormat(str, Enum):
 
 def _handle_error(e: Exception) -> str:
     """Return a consistent, human-readable error string."""
-    if "ForceNewAuthentication" in type(e).__name__:
+    if isinstance(e, LoginPageRedirectError):
+        # Account logins renew the session by themselves, so this only
+        # happens with an expired LANIS_SESSION_ID.
         reset_client()
         return (
             "Error: Session expired. The client has been reset. "
@@ -122,7 +123,7 @@ async def lanis_get_schools(
         - Returns "No schools found." if the list is empty
     """
     try:
-        schools = _lanisapi_schools._get_schools()
+        schools = list_schools()
 
         if not schools:
             return "No schools found."
@@ -132,9 +133,9 @@ async def lanis_get_schools(
                 "count": len(schools),
                 "schools": [
                     {
-                        "id": _to_str(s.get("Id")),
-                        "name": _to_str(s.get("Name")),
-                        "city": _to_str(s.get("Ort")),
+                        "id": s.id,
+                        "name": s.name,
+                        "city": s.city,
                     }
                     for s in schools
                 ],
@@ -148,9 +149,9 @@ async def lanis_get_schools(
             "",
         ]
         for s in schools:
-            name = _to_str(s.get("Name"))
-            city = _to_str(s.get("Ort"))
-            school_id = _to_str(s.get("Id"))
+            name = s.name
+            city = s.city
+            school_id = s.id
             lines.append(f"- **{name}** ({city}) — ID: `{school_id}`")
 
         return _truncate("\n".join(lines))
@@ -380,7 +381,7 @@ async def lanis_get_calendar(params: CalendarInput) -> str:
 
         def _get_responsible(ev: Any) -> str:
             try:
-                return _to_str(ev.responsible())
+                return _to_str(client.get_event_responsible(ev))
             except Exception:
                 return ""
 
@@ -486,7 +487,7 @@ async def lanis_get_calendar_of_month(
 
         def _get_responsible(ev: Any) -> str:
             try:
-                return _to_str(ev.responsible())
+                return _to_str(client.get_event_responsible(ev))
             except Exception:
                 return ""
 
@@ -1073,11 +1074,7 @@ async def lanis_get_timetable(
         - Returns "No timetable entries found." if the timetable is empty
     """
     try:
-        get_client()  # ensure authenticated
-        resp = _Request.client.get(
-            f"{_LANIS_BASE}/stundenplan.php",
-            follow_redirects=True,
-        )
+        resp = get_client().get_page(f"{_LANIS_BASE}/stundenplan.php")
         tree = _HTMLParser(resp.text)
 
         # Extract class name from title
@@ -1265,11 +1262,7 @@ async def lanis_get_learning_groups(
         - Returns "No learning groups found." if there are none
     """
     try:
-        get_client()  # ensure authenticated
-        resp = _Request.client.get(
-            f"{_LANIS_BASE}/lerngruppen.php",
-            follow_redirects=True,
-        )
+        resp = get_client().get_page(f"{_LANIS_BASE}/lerngruppen.php")
         tree = _HTMLParser(resp.text)
 
         table = tree.css_first("table#LGs")
@@ -1395,8 +1388,6 @@ async def lanis_get_file_storage(
         - Returns "No items found." if the folder is empty
     """
     try:
-        get_client()  # ensure authenticated
-
         if folder_id:
             url = f"{_LANIS_BASE}/dateispeicher.php"
             params: dict[str, str] = {"a": "view", "folder": folder_id}
@@ -1404,7 +1395,7 @@ async def lanis_get_file_storage(
             url = f"{_LANIS_BASE}/dateispeicher.php"
             params = {}
 
-        resp = _Request.client.get(url, params=params, follow_redirects=True)
+        resp = get_client().get_page(url, params=params)
         tree = _HTMLParser(resp.text)
 
         # Get current folder name from h1
@@ -1533,11 +1524,7 @@ async def lanis_get_file_distribution(
         - Returns "No distributed files available." if there are none
     """
     try:
-        get_client()  # ensure authenticated
-        resp = _Request.client.get(
-            f"{_LANIS_BASE}/dateiverteilung.php",
-            follow_redirects=True,
-        )
+        resp = get_client().get_page(f"{_LANIS_BASE}/dateiverteilung.php")
         tree = _HTMLParser(resp.text)
 
         # Check for "no files" alert
@@ -1644,11 +1631,7 @@ async def lanis_get_votes(
         - Returns "No active votes." if there are none
     """
     try:
-        get_client()  # ensure authenticated
-        resp = _Request.client.get(
-            f"{_LANIS_BASE}/wahl.php",
-            follow_redirects=True,
-        )
+        resp = get_client().get_page(f"{_LANIS_BASE}/wahl.php")
         tree = _HTMLParser(resp.text)
 
         # Check for "no active events" message

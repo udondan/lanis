@@ -1,11 +1,4 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>udondan/renovate-config"],
-  "packageRules": [
-    {
-      "description": "lanisapi imports selectolax.parser, which selectolax 1.0 removed",
-      "matchPackageNames": ["selectolax"],
-      "allowedVersions": "<1.0.0"
-    }
-  ]
+  "extends": ["github>udondan/renovate-config"]
 }

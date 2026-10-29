@@ -104,6 +104,10 @@ Füge einen Eintrag unter `mcpServers` hinzu. Wähle einen der drei Authentifizi
 
 Nach dem Speichern Claude Desktop neu starten.
 
+#### Session speichern (optional)
+
+Bei Modus 1 und 3 meldet sich der Server beim Start an und bei Ablauf der Session automatisch neu an. Damit nach einem Neustart keine neue Anmeldung nötig ist, kann die Session in einer Datei gespeichert werden. Dazu `LANIS_DATA_DIR` auf ein Verzeichnis setzen, z. B. `"LANIS_DATA_DIR": "/Users/du/.local/share/pylanis"`. Der Server legt dort `session.json` an, die nur für dich lesbar ist. Ohne `LANIS_DATA_DIR` bleibt die Session nur im Speicher.
+
 ---
 
 ## Docker MCP
@@ -292,7 +296,7 @@ Zeig mir den Vertretungsplan als JSON.
 
 ### „Session abgelaufen" / Session expired
 
-Der Session-Cookie ist abgelaufen (nur bei Modus 2 relevant). Der Server setzt die Verbindung automatisch zurück. Einfach die Anfrage erneut stellen – beim nächsten Versuch wird eine neue Session aufgebaut.
+Der Session-Cookie ist abgelaufen. Das betrifft nur Modus 2, bei Modus 1 und 3 meldet sich der Server automatisch neu an. Bei Modus 2 einen neuen Session-Cookie eintragen oder auf Modus 1 wechseln.
 
 ### „App nicht verfügbar an deiner Schule"
 
@@ -316,4 +320,4 @@ Stelle sicher, dass die Umgebungsvariablen in der Claude Desktop Konfiguration k
 
 pylanis steht unter der [MIT-Lizenz](LICENSE).
 
-Der Ordner [`src/lanis_mcp/lanisapi/`](src/lanis_mcp/lanisapi/) enthält eine Kopie von [LanisAPI](https://github.com/lanis-mobile/LanisAPI) 0.4.1 von Dacjan Gapinski. Das Projekt wird nicht mehr weiterentwickelt und wird hier gepflegt. LanisAPI steht ebenfalls unter der MIT-Lizenz, siehe [`src/lanis_mcp/lanisapi/LICENSE`](src/lanis_mcp/lanisapi/LICENSE).
+Der Ordner [`src/lanis_mcp/lanisapi/`](src/lanis_mcp/lanisapi/) basiert auf [LanisAPI](https://github.com/lanis-mobile/LanisAPI) 0.4.1 von Dacjan Gapinski. Das Projekt wird nicht mehr weiterentwickelt; der Code wurde überarbeitet und wird hier gepflegt. LanisAPI steht ebenfalls unter der MIT-Lizenz, siehe [`src/lanis_mcp/lanisapi/LICENSE`](src/lanis_mcp/lanisapi/LICENSE).
