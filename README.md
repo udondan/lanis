@@ -311,3 +311,9 @@ Prüfe, ob du den richtigen Zeitraum angegeben hast. Für den Kalender müssen `
 ### Verbindungsfehler
 
 Stelle sicher, dass die Umgebungsvariablen in der Claude Desktop Konfiguration korrekt gesetzt sind und dass du Zugang zum Schulportal Hessen hast (ggf. VPN oder Schulnetzwerk erforderlich).
+
+## Lizenz
+
+pylanis steht unter der [MIT-Lizenz](LICENSE).
+
+Der Ordner [`src/lanis_mcp/lanisapi/`](src/lanis_mcp/lanisapi/) enthält eine Kopie von [LanisAPI](https://github.com/lanis-mobile/LanisAPI) 0.4.1 von Dacjan Gapinski. Das Projekt wird nicht mehr weiterentwickelt und wird hier gepflegt. LanisAPI steht ebenfalls unter der MIT-Lizenz, siehe [`src/lanis_mcp/lanisapi/LICENSE`](src/lanis_mcp/lanisapi/LICENSE).

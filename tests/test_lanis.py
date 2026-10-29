@@ -59,7 +59,7 @@ class TestAppAvailabilityDetection:
     def test_exact_name_match_detected(self):
         """App with exact name 'Mein Unterricht' is detected as available."""
         import lanis_mcp.client  # noqa: F401 — trigger monkey-patch
-        import lanisapi.functions.apps as apps_module
+        import lanis_mcp.lanisapi.functions.apps as apps_module
 
         apps = [
             self._make_app("Mein Unterricht", "https://example.com/meinunterricht.php")
@@ -72,7 +72,7 @@ class TestAppAvailabilityDetection:
     def test_renamed_app_detected_by_url(self):
         """App named 'Meine Kurse' linking to meinunterricht.php is detected as 'Mein Unterricht'."""
         import lanis_mcp.client  # noqa: F401 — trigger monkey-patch
-        import lanisapi.functions.apps as apps_module
+        import lanis_mcp.lanisapi.functions.apps as apps_module
 
         apps = [
             self._make_app(
@@ -89,7 +89,7 @@ class TestAppAvailabilityDetection:
     def test_kalender_detected_by_url(self):
         """App with different name linking to kalender.php is detected as 'Kalender'."""
         import lanis_mcp.client  # noqa: F401 — trigger monkey-patch
-        import lanisapi.functions.apps as apps_module
+        import lanis_mcp.lanisapi.functions.apps as apps_module
 
         apps = [
             self._make_app(
@@ -106,7 +106,7 @@ class TestAppAvailabilityDetection:
     def test_vertretungsplan_detected_by_url(self):
         """App with different name linking to vertretungsplan.php is detected."""
         import lanis_mcp.client  # noqa: F401 — trigger monkey-patch
-        import lanisapi.functions.apps as apps_module
+        import lanis_mcp.lanisapi.functions.apps as apps_module
 
         apps = [
             self._make_app(
@@ -124,7 +124,7 @@ class TestAppAvailabilityDetection:
     def test_nachrichten_detected_by_url(self):
         """App with different name linking to nachrichten.php is detected."""
         import lanis_mcp.client  # noqa: F401 — trigger monkey-patch
-        import lanisapi.functions.apps as apps_module
+        import lanis_mcp.lanisapi.functions.apps as apps_module
 
         apps = [
             self._make_app(
@@ -142,7 +142,7 @@ class TestAppAvailabilityDetection:
     def test_unrelated_app_not_detected(self):
         """App with unrelated name and URL is not detected as any supported app."""
         import lanis_mcp.client  # noqa: F401 — trigger monkey-patch
-        import lanisapi.functions.apps as apps_module
+        import lanis_mcp.lanisapi.functions.apps as apps_module
 
         apps = [
             self._make_app(
@@ -160,7 +160,7 @@ class TestAppAvailabilityDetection:
     def test_no_duplicate_when_both_name_and_url_match(self):
         """App that matches both by name and URL is only listed once."""
         import lanis_mcp.client  # noqa: F401 — trigger monkey-patch
-        import lanisapi.functions.apps as apps_module
+        import lanis_mcp.lanisapi.functions.apps as apps_module
 
         apps = [
             self._make_app(
@@ -178,7 +178,7 @@ class TestAppAvailabilityDetection:
     def test_empty_app_list_returns_empty(self):
         """Empty app list returns no available apps."""
         import lanis_mcp.client  # noqa: F401 — trigger monkey-patch
-        import lanisapi.functions.apps as apps_module
+        import lanis_mcp.lanisapi.functions.apps as apps_module
 
         with patch.object(apps_module, "_get_apps", return_value=[]):
             self._clear_cache(apps_module._get_available_apps)
@@ -232,7 +232,7 @@ class TestSubstitutionParsing:
         from datetime import date
 
         from lanis_mcp import client as client_module
-        import lanisapi.functions.substitution as substitution_module
+        import lanis_mcp.lanisapi.functions.substitution as substitution_module
 
         entry = {
             "Vertreter": "MÜL",
@@ -263,8 +263,8 @@ class TestSubstitutionParsing:
     def test_response_without_list_raises_app_not_available(self):
         """A number instead of a list means the school doesn't use the plan."""
         from lanis_mcp import client as client_module
-        from lanisapi.exceptions import AppNotAvailableError
-        import lanisapi.functions.substitution as substitution_module
+        from lanis_mcp.lanisapi.exceptions import AppNotAvailableError
+        import lanis_mcp.lanisapi.functions.substitution as substitution_module
 
         with (
             patch.object(
@@ -280,7 +280,7 @@ class TestSubstitutionParsing:
     def test_client_uses_patched_function(self):
         """LanisClient.get_substitution_plan calls the patched function."""
         from lanis_mcp import client as client_module
-        import lanisapi.client as lanisapi_client
+        import lanis_mcp.lanisapi.client as lanisapi_client
 
         assert (
             lanisapi_client._get_substitutions is client_module._fixed_get_substitutions
@@ -297,7 +297,7 @@ class TestSubstitutionPlan:
             pytest.skip("No substitution plan on weekends")
 
         from lanis_mcp.client import get_client
-        from lanisapi.exceptions import AppNotAvailableError
+        from lanis_mcp.lanisapi.exceptions import AppNotAvailableError
 
         try:
             plan = get_client().get_substitution_plan()

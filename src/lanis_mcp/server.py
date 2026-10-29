@@ -27,9 +27,8 @@ from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field, ConfigDict
 from selectolax.parser import HTMLParser as _HTMLParser
 
-import lanisapi.functions.schools as _lanisapi_schools
-from lanisapi.helpers.request import Request as _Request
-
+import lanis_mcp.lanisapi.functions.schools as _lanisapi_schools
+from lanis_mcp.lanisapi.helpers.request import Request as _Request
 from lanis_mcp.client import get_client, reset_client
 
 _LANIS_BASE = "https://start.schulportal.hessen.de"
