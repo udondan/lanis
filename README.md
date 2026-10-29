@@ -1,161 +1,88 @@
 # pylanis
 
-Python-SDK, Kommandozeilenwerkzeug und [MCP-Server](https://modelcontextprotocol.io/) für das **Schulportal Hessen (Lanis)**. Damit greifen KI-Assistenten wie Claude, eigene Skripte oder du selbst im Terminal direkt auf Schulinformationen zu – Vertretungsplan, Kalender, Hausaufgaben, Nachrichten und mehr.
+[![PyPI](https://img.shields.io/pypi/v/pylanis)](https://pypi.org/project/pylanis/)
+[![Python](https://img.shields.io/pypi/pyversions/pylanis)](https://pypi.org/project/pylanis/)
+[![CI](https://github.com/udondan/pylanis/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/udondan/pylanis/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/udondan/pylanis/graph/badge.svg)](https://codecov.io/gh/udondan/pylanis)
+[![License](https://img.shields.io/github/license/udondan/pylanis)](LICENSE)
+
+Zugriff auf das **[Schulportal Hessen (Lanis)](https://start.schulportal.hessen.de/)** aus Python, aus dem Terminal und aus KI-Assistenten: Vertretungsplan, Stundenplan, Kalender, Hausaufgaben, Nachrichten, Dateien und mehr.
+
+pylanis ist ein Paket mit drei gleichwertigen Zugängen zu denselben Daten:
+
+| Zugang                          | Für                                           | Start                       |
+| ------------------------------- | --------------------------------------------- | --------------------------- |
+| [Python-SDK](#python-sdk)       | eigene Programme und Automatisierungen        | `from pylanis import Lanis` |
+| [Kommandozeile](#kommandozeile) | das Terminal und Shell-Skripte (JSON-Ausgabe) | `lanis <befehl>`            |
+| [MCP-Server](#mcp-server)       | KI-Assistenten wie Claude                     | `lanis mcp`                 |
+
+pylanis liest nur. Es verändert keine Daten im Schulportal.
 
 ---
 
-## Was ist pylanis?
+## Installation
 
-`pylanis` verbindet deine KI (z. B. Claude) mit dem [Schulportal Hessen](https://start.schulportal.hessen.de/). Sobald der Server eingerichtet ist, kannst du deiner KI ganz natürlich Fragen stellen wie:
+pylanis braucht Python 3.11 oder neuer und wird auf [PyPI](https://pypi.org/project/pylanis/) veröffentlicht.
 
-> „Was steht heute im Vertretungsplan?"
-> „Welche Hausaufgaben habe ich diese Woche?"
-> „Zeig mir alle Termine im April."
+```bash
+# Als Bibliothek in einem Projekt
+pip install pylanis        # oder: uv add pylanis
 
-Der Server kommuniziert über das standardisierte MCP-Protokoll und ist **ausschließlich lesend** – er verändert keine Daten im Schulportal.
+# Den Befehl lanis global installieren
+uv tool install pylanis    # oder: pipx install pylanis
 
-Das Paket wird auf [PyPI](https://pypi.org/project/pylanis/) als `pylanis` veröffentlicht und bietet drei Zugänge:
-
-- **MCP-Server** für KI-Assistenten: `lanis mcp`
-- **Kommandozeile** für das Terminal und Skripte: `lanis <befehl>` (siehe [Kommandozeile](#kommandozeile))
-- **Python-SDK** für eigene Programme: `from pylanis import Lanis` (siehe [Python-SDK](#python-sdk))
-
----
-
-## Voraussetzungen
-
-- Ein aktiver **Lanis-Account** (Schulportal Hessen)
-- Die **Schul-ID** deiner Schule (siehe [Schul-ID herausfinden](#schul-id-herausfinden))
-- [`uv`](https://docs.astral.sh/uv/) installiert (modernes Python-Paketverwaltungstool)
-- Für den MCP-Server: ein MCP-kompatibler Client, z. B. [Claude Desktop](https://claude.ai/download)
+# Ohne Installation ausprobieren
+uvx --from pylanis lanis schools
+```
 
 ---
 
-## Einrichtung
+## Anmeldung
 
-### Schul-ID herausfinden
-
-Falls du deine Schul-ID nicht kennst, kannst du sie über das Tool `get_schools` ermitteln. Frage deine KI einfach:
-
-> „Suche die Schul-ID für die [Name deiner Schule] in [Stadt]."
-
-Das Tool `get_schools` benötigt **keine Anmeldung** und listet alle Schulen im Schulportal Hessen mit ihrer ID auf. Im Terminal geht das auch ohne KI:
+Du brauchst einen Lanis-Account und die Schul-ID deiner Schule. Die Schul-ID findest du ohne Anmeldung:
 
 ```bash
 uvx --from pylanis lanis --format markdown schools | grep -i "musterstadt"
 ```
 
-### Claude Desktop konfigurieren
+Es gibt drei Arten, sich anzumelden. Das SDK nimmt die Zugangsdaten als Parameter, Kommandozeile und MCP-Server lesen sie aus Umgebungsvariablen (`Lanis.from_env()` im SDK ebenso).
 
-Öffne die Konfigurationsdatei von Claude Desktop:
+| Art                                 | Umgebungsvariablen                                                           | SDK-Parameter                                        |
+| ----------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Benutzername & Passwort (empfohlen) | `LANIS_SCHOOL_ID`, `LANIS_USERNAME`, `LANIS_PASSWORD`                        | `school_id`, `username`, `password`                  |
+| Schule nach Name & Stadt            | `LANIS_SCHOOL_NAME`, `LANIS_SCHOOL_CITY`, `LANIS_USERNAME`, `LANIS_PASSWORD` | `school_name`, `school_city`, `username`, `password` |
+| Session-Cookie (kein Passwort)      | `LANIS_SCHOOL_ID`, `LANIS_SESSION_ID`                                        | `school_id`, `session_id`                            |
 
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+Mit Benutzername und Passwort meldet sich pylanis automatisch neu an, wenn die Session abläuft. Ein Session-Cookie läuft irgendwann ab und muss dann ersetzt werden.
 
-Füge einen Eintrag unter `mcpServers` hinzu. Wähle einen der drei Authentifizierungsmodi:
-
-#### Modus 1 – Benutzername & Passwort (empfohlen)
-
-```json
-{
-  "mcpServers": {
-    "lanis": {
-      "command": "uvx",
-      "args": ["--from", "pylanis", "lanis", "mcp"],
-      "env": {
-        "LANIS_SCHOOL_ID": "1234",
-        "LANIS_USERNAME": "vorname.nachname",
-        "LANIS_PASSWORD": "dein-passwort"
-      }
-    }
-  }
-}
-```
-
-#### Modus 2 – Session-Cookie (schneller, kein Passwort)
-
-```json
-{
-  "mcpServers": {
-    "lanis": {
-      "command": "uvx",
-      "args": ["--from", "pylanis", "lanis", "mcp"],
-      "env": {
-        "LANIS_SCHOOL_ID": "1234",
-        "LANIS_SESSION_ID": "dein-session-cookie"
-      }
-    }
-  }
-}
-```
-
-> **Hinweis:** Der Session-Cookie läuft nach einiger Zeit ab. Bei Ablauf gibt der Server eine entsprechende Fehlermeldung zurück – einfach die Anfrage wiederholen oder auf Modus 1 wechseln.
-
-#### Modus 3 – Schule nach Name & Stadt
-
-```json
-{
-  "mcpServers": {
-    "lanis": {
-      "command": "uvx",
-      "args": ["--from", "pylanis", "lanis", "mcp"],
-      "env": {
-        "LANIS_SCHOOL_NAME": "Mustergymnasium",
-        "LANIS_SCHOOL_CITY": "Musterstadt",
-        "LANIS_USERNAME": "vorname.nachname",
-        "LANIS_PASSWORD": "dein-passwort"
-      }
-    }
-  }
-}
-```
-
-Nach dem Speichern Claude Desktop neu starten.
-
-#### Session speichern (optional)
-
-Bei Modus 1 und 3 meldet sich der Server beim Start an und bei Ablauf der Session automatisch neu an. Damit nach einem Neustart keine neue Anmeldung nötig ist, kann die Session in einer Datei gespeichert werden. Dazu `LANIS_DATA_DIR` auf ein Verzeichnis setzen, z. B. `"LANIS_DATA_DIR": "/Users/du/.local/share/pylanis"`. Der Server legt dort `session.json` an, die nur für dich lesbar ist. Ohne `LANIS_DATA_DIR` bleibt die Session nur im Speicher.
+**Session speichern (optional):** Mit `LANIS_DATA_DIR` (SDK: `data_dir`) wird die Session in `session.json` in diesem Verzeichnis gespeichert, sodass nach einem Neustart keine neue Anmeldung nötig ist. Die Datei ist nur für dich lesbar. Ohne diese Einstellung bleibt die Session nur im Speicher.
 
 ---
 
-## Kommandozeile
+## Verfügbare Daten
 
-Der Befehl `lanis` liest dieselben Daten wie der MCP-Server und gibt sie als JSON aus, mit `--format markdown` als lesbaren Text. Die Zugangsdaten kommen aus denselben Umgebungsvariablen wie beim MCP-Server (`LANIS_SCHOOL_ID`, `LANIS_USERNAME`, `LANIS_PASSWORD` usw.).
+Alle drei Zugänge bieten dieselben Daten:
 
-```bash
-# Ohne Installation
-uvx --from pylanis lanis schools
+| Daten                               | SDK (`Lanis`)                                | Kommandozeile (`lanis`)            | MCP-Tool                                       |
+| ----------------------------------- | -------------------------------------------- | ---------------------------------- | ---------------------------------------------- |
+| Schulen mit ID (ohne Anmeldung)     | `get_schools()`                              | `schools`                          | `get_schools`                                  |
+| Vertretungsplan                     | `get_substitution_plan()`                    | `substitutions`                    | `get_substitution_plan`                        |
+| Stundenplan                         | `get_timetable()`                            | `timetable`                        | `get_timetable`                                |
+| Lerngruppen/Kurse                   | `get_learning_groups()`                      | `learning-groups`                  | `get_learning_groups`                          |
+| Kalender für einen Zeitraum         | `get_calendar(start, end)`                   | `calendar --start … --end …`       | `get_calendar`                                 |
+| Kalender des aktuellen Monats       | `get_calendar_of_month()`                    | `calendar`                         | `get_calendar_of_month`                        |
+| Aufgaben aus „Mein Unterricht"      | `get_tasks()`                                | `tasks`                            | `get_tasks`                                    |
+| Nachrichten                         | `get_conversations(number=10)`               | `conversations [--number N]`       | `get_conversations`                            |
+| Dateispeicher                       | `get_file_storage(folder_id=None)`           | `files [--folder ID]`              | `get_file_storage`                             |
+| Dateiverteilung                     | `get_file_distribution()`                    | `file-distribution`                | `get_file_distribution`                        |
+| Aktive Wahlen                       | `get_votes()`                                | `votes`                            | `get_votes`                                    |
+| App-Kacheln und Ordner im Dashboard | `get_apps()`, `get_folders()`                | `apps`, `folders`                  | `get_apps`, `get_folders`                      |
+| Unterstützte Apps der Schule        | `get_available_apps()`, `is_app_available()` | `available-apps`, `check-app NAME` | `get_available_apps`, `check_app_availability` |
 
-# Oder installieren
-uv tool install pylanis
+Hinweise:
 
-export LANIS_SCHOOL_ID=1234
-export LANIS_USERNAME=vorname.nachname
-export LANIS_PASSWORD=dein-passwort
-
-lanis substitutions
-lanis --format markdown tasks
-lanis calendar --start 2026-11-01 --end 2026-11-30
-lanis timetable | jq '.entries[] | select(.day == "Montag")'
-```
-
-| Befehl                                          | Inhalt                                                    |
-| ----------------------------------------------- | --------------------------------------------------------- |
-| `schools`                                       | Alle Schulen mit ID, Name und Stadt (ohne Anmeldung)      |
-| `substitutions`                                 | Vertretungsplan des aktuellen Schultags                   |
-| `calendar [--start --end] [--responsible]`      | Kalender; ohne `--start`/`--end` der aktuelle Monat       |
-| `tasks`                                         | Aufgaben aus „Mein Unterricht"                            |
-| `conversations [--number N]`                    | Nachrichten (Standard: 10, `-1` = alle)                   |
-| `timetable`                                     | Stundenplan                                               |
-| `learning-groups`                               | Lerngruppen/Kurse                                         |
-| `files [--folder ID]`                           | Dateispeicher; ohne `--folder` die oberste Ebene          |
-| `file-distribution`                             | Verteilte Dateien                                         |
-| `votes`                                         | Aktive Wahlen                                             |
-| `apps` / `folders`                              | App-Kacheln und Ordner auf dem Dashboard                  |
-| `available-apps` / `check-app NAME`             | Welche unterstützten Apps die Schule anbietet             |
-| `mcp`                                           | Startet den MCP-Server                                    |
-
-Fehler werden als `Error: …` auf stderr ausgegeben, der Befehl endet dann mit Exit-Code 1. `lanis --help` und `lanis <befehl> --help` zeigen alle Optionen.
+- Mit `include_responsible=True` (SDK), `--responsible` (Kommandozeile) bzw. `include_responsible` (MCP) enthalten Kalendertermine die verantwortliche Person. Dafür ist pro Termin eine zusätzliche Anfrage nötig, das kann bei vielen Terminen dauern.
+- `number=-1` lädt alle Nachrichten und belastet den Lanis-Server stark. Bitte sparsam verwenden.
 
 ---
 
@@ -167,8 +94,6 @@ from datetime import date
 from pylanis import Lanis
 
 lanis = Lanis(school_id="1234", username="vorname.nachname", password="dein-passwort")
-# oder: Lanis(school_id="1234", session_id="dein-session-cookie")
-# oder: Lanis(school_name="Mustergymnasium", school_city="Musterstadt", username=..., password=...)
 # oder: Lanis.from_env() liest die LANIS_*-Umgebungsvariablen
 
 for task in lanis.get_tasks():
@@ -181,7 +106,9 @@ for sub in plan.substitutions:
 events = lanis.get_calendar(date(2026, 11, 1), date(2026, 11, 30))
 ```
 
-Die Methoden geben Dataclasses zurück (`Task`, `SubstitutionPlan`, `CalendarEvent`, `Timetable` usw.), Datumswerte als `date`/`datetime`. `Lanis.get_schools()` braucht keine Anmeldung. Die Anmeldung passiert beim ersten Aufruf, der sie braucht. Mit Benutzername und Passwort meldet sich pylanis nach Ablauf der Session selbst neu an. Mit `data_dir="..."` wird die Session in `session.json` in diesem Verzeichnis gespeichert, sonst nur im Speicher. Jede `Lanis`-Instanz hat ihre eigene Session, mehrere Konten in einem Prozess sind also möglich.
+- Die Methoden geben Dataclasses zurück (`Task`, `SubstitutionPlan`, `CalendarEvent`, `Timetable` usw.), Datumswerte als `date`/`datetime`.
+- Die Anmeldung passiert beim ersten Aufruf, der sie braucht. `Lanis.get_schools()` braucht keine.
+- Jede `Lanis`-Instanz hat ihre eigene Session, mehrere Konten in einem Prozess sind möglich.
 
 Fehler:
 
@@ -190,213 +117,102 @@ Fehler:
 
 ---
 
-## Docker MCP
+## Kommandozeile
 
-### Docker-Image bauen und registrieren
+Der Befehl `lanis` gibt die Daten als JSON aus, mit `--format markdown` als lesbaren Text.
+
+```bash
+export LANIS_SCHOOL_ID=1234
+export LANIS_USERNAME=vorname.nachname
+export LANIS_PASSWORD=dein-passwort
+
+lanis substitutions
+lanis --format markdown tasks
+lanis calendar --start 2026-11-01 --end 2026-11-30
+lanis timetable | jq '.entries[] | select(.day == "Montag")'
+```
+
+Alle Befehle stehen in der Tabelle [Verfügbare Daten](#verfügbare-daten). `lanis --help` und `lanis <befehl> --help` zeigen alle Optionen. Fehler werden als `Error: …` auf stderr ausgegeben, der Befehl endet dann mit Exit-Code 1.
+
+---
+
+## MCP-Server
+
+`lanis mcp` startet einen [MCP-Server](https://modelcontextprotocol.io/) über stdio. Damit kann ein KI-Assistent die Daten abfragen, und du fragst einfach:
+
+- „Was steht heute im Vertretungsplan?"
+- „Welche Hausaufgaben habe ich diese Woche?"
+- „Zeig mir alle Termine im April."
+- „Habe ich ungelesene Nachrichten?"
+
+### Claude Desktop
+
+Öffne die Konfigurationsdatei von Claude Desktop:
+
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+Füge einen Eintrag unter `mcpServers` hinzu. Die Umgebungsvariablen entsprechen der Tabelle unter [Anmeldung](#anmeldung):
+
+```json
+{
+  "mcpServers": {
+    "lanis": {
+      "command": "uvx",
+      "args": ["--from", "pylanis", "lanis", "mcp"],
+      "env": {
+        "LANIS_SCHOOL_ID": "1234",
+        "LANIS_USERNAME": "vorname.nachname",
+        "LANIS_PASSWORD": "dein-passwort"
+      }
+    }
+  }
+}
+```
+
+Nach dem Speichern Claude Desktop neu starten.
+
+### Docker
 
 Voraussetzung: [`mise`](https://mise.jdx.dev) installiert.
 
 ```bash
-# Nur bauen
-mise run docker-build
-
-# Nur im Docker MCP Katalog registrieren
-mise run docker-register
-
-# Beides nacheinander
-mise run docker
+mise run docker-build      # Image bauen
+mise run docker-register   # im Docker MCP Katalog registrieren
+mise run docker            # beides nacheinander
 ```
 
----
+### Ausgabe
 
-## Verfügbare Tools
+Die meisten Tools haben einen Parameter `response_format`: `markdown` (Standard, für Menschen lesbar) oder `json` (maschinenlesbar). Du kannst das Format einfach in deiner Frage angeben, z. B. „Zeig mir den Vertretungsplan als JSON."
 
-Alle Tools sind **nur lesend** und verändern keine Daten. Die meisten Tools unterstützen die Ausgabeformate `markdown` (Standard, für Menschen lesbar) und `json` (maschinenlesbar).
-
-### Einrichtung
-
-| Tool                     | Beschreibung                                                         | Auth erforderlich |
-| ------------------------ | -------------------------------------------------------------------- | :---------------: |
-| `get_schools`            | Listet alle Schulen im Schulportal Hessen mit ID, Name und Stadt     |        ❌         |
-| `get_available_apps`     | Zeigt, welche der unterstützten Apps an deiner Schule verfügbar sind |        ✅         |
-| `check_app_availability` | Prüft, ob eine bestimmte App an deiner Schule verfügbar ist          |        ✅         |
-
-### Stundenplan & Unterricht
-
-| Tool                    | Beschreibung                                                        | Parameter | Auth erforderlich |
-| ----------------------- | ------------------------------------------------------------------- | --------- | :---------------: |
-| `get_substitution_plan` | Heutiger Vertretungsplan (Klasse, Fach, Raum, Lehrer, Hinweise)     | –         |        ✅         |
-| `get_timetable`         | Wöchentlicher Stundenplan (Fach, Raum, Lehrer je Stunde und Tag)    | –         |        ✅         |
-| `get_learning_groups`   | Lerngruppen/Kurse, in denen du eingeschrieben bist, inkl. Lehrkraft | –         |        ✅         |
-
-### Kalender
-
-| Tool                    | Beschreibung                                     | Parameter                                          | Auth erforderlich |
-| ----------------------- | ------------------------------------------------ | -------------------------------------------------- | :---------------: |
-| `get_calendar`          | Schulkalender für einen beliebigen Zeitraum      | `start`, `end` (JJJJ-MM-TT), `include_responsible` |        ✅         |
-| `get_calendar_of_month` | Schulkalender für den aktuellen Monat (Kurzform) | `include_responsible`                              |        ✅         |
-
-> **Hinweis zu `include_responsible`:** Wenn `true`, wird für jeden Termin eine zusätzliche API-Anfrage gestellt. Bei vielen Terminen kann dies langsam sein.
-
-### Hausaufgaben & Aufgaben
-
-| Tool        | Beschreibung                                                                          | Auth erforderlich |
-| ----------- | ------------------------------------------------------------------------------------- | :---------------: |
-| `get_tasks` | Aufgaben und Hausaufgaben aus „Mein Unterricht" (Fach, Lehrer, Beschreibung, Anhänge) |        ✅         |
-
-### Nachrichten
-
-| Tool                | Beschreibung                              | Parameter                            | Auth erforderlich |
-| ------------------- | ----------------------------------------- | ------------------------------------ | :---------------: |
-| `get_conversations` | Nachrichten aus dem „Nachrichten"-Bereich | `number` (Standard: 10, `-1` = alle) |        ✅         |
-
-> **Hinweis:** `-1` lädt alle Nachrichten und kann den Lanis-Server stark belasten. Bitte sparsam verwenden.
-
-### Dateien
-
-| Tool                    | Beschreibung                                                                | Parameter                               | Auth erforderlich |
-| ----------------------- | --------------------------------------------------------------------------- | --------------------------------------- | :---------------: |
-| `get_file_storage`      | Inhalt des Schulischen Dateispeichers (Ordner & Dateien mit Download-Links) | `folder_id` (optional, für Unterordner) |        ✅         |
-| `get_file_distribution` | Verteilte Dateien und Ankündigungen (Dateiverteilung / GRB Infos)           | –                                       |        ✅         |
-
-### Portal
-
-| Tool          | Beschreibung                                                     | Auth erforderlich |
-| ------------- | ---------------------------------------------------------------- | :---------------: |
-| `get_apps`    | Alle App-Kacheln auf dem Lanis-Dashboard (Name, Link, Kategorie) |        ✅         |
-| `get_folders` | Ordner/Kategorien auf dem Lanis-Dashboard                        |        ✅         |
-| `get_votes`   | Aktive Abstimmungen und Wahlen (z. B. Schülerratswahl)           |        ✅         |
-
----
-
-## Beispiele
-
-Hier sind typische Fragen, die du deiner KI stellen kannst:
-
-### Einrichtung & Überblick
-
-```
-Welche Schul-ID hat das Gymnasium Musterstadt?
-```
-
-```
-Welche Lanis-Apps sind an meiner Schule verfügbar?
-```
-
-### Stundenplan & Vertretung
-
-```
-Was steht heute im Vertretungsplan?
-```
-
-```
-Zeig mir meinen Stundenplan für diese Woche.
-```
-
-```
-In welchen Kursen bin ich eingeschrieben und wer sind meine Lehrkräfte?
-```
-
-```
-Wer vertritt heute Herrn Müller in der 3. Stunde?
-```
-
-### Kalender
-
-```
-Welche Schultermine gibt es im April?
-```
-
-```
-Zeig mir alle Termine zwischen dem 1. und 15. März.
-```
-
-```
-Was sind die nächsten Schulveranstaltungen diesen Monat?
-```
-
-### Hausaufgaben & Aufgaben
-
-```
-Welche Hausaufgaben habe ich aktuell?
-```
-
-```
-Gibt es Aufgaben mit Anhängen, die ich herunterladen kann?
-```
-
-```
-Was muss ich für Mathematik vorbereiten?
-```
-
-### Nachrichten
-
-```
-Zeig mir meine letzten 5 Nachrichten.
-```
-
-```
-Habe ich ungelesene Nachrichten?
-```
-
-```
-Was hat die Schule zuletzt kommuniziert?
-```
-
-### Dateien
-
-```
-Was liegt im Schulischen Dateispeicher?
-```
-
-```
-Gibt es neue verteilte Dateien oder Ankündigungen?
-```
-
----
-
-## Ausgabeformate
-
-Die meisten MCP-Tools unterstützen zwei Ausgabeformate:
-
-- **`markdown`** (Standard): Für Menschen lesbar, ideal für die direkte Anzeige in der KI-Konversation
-- **`json`**: Maschinenlesbar, nützlich wenn du die Daten weiterverarbeiten möchtest
-
-Du kannst das Format in deiner Anfrage angeben:
-
-```
-Zeig mir den Vertretungsplan als JSON.
-```
-
-Die Kommandozeile gibt standardmäßig JSON aus und mit `--format markdown` denselben Text wie die MCP-Tools.
-
-> **Hinweis:** Antworten der MCP-Tools sind auf **25.000 Zeichen** begrenzt. Bei sehr langen Ergebnissen wird die Ausgabe gekürzt und ein Hinweis angezeigt. Verwende in diesem Fall Filter (z. B. einen engeren Datumsbereich beim Kalender), um die Ergebnisse einzugrenzen.
+Antworten sind auf **25.000 Zeichen** begrenzt. Längere Ergebnisse werden gekürzt und mit einem Hinweis versehen. Grenze die Abfrage dann ein, z. B. mit einem kürzeren Zeitraum im Kalender.
 
 ---
 
 ## Fehlerbehebung
 
-### „Session abgelaufen" / Session expired
+### Session abgelaufen
 
-Der Session-Cookie ist abgelaufen. Das betrifft nur Modus 2, bei Modus 1 und 3 meldet sich der Server automatisch neu an. Bei Modus 2 einen neuen Session-Cookie eintragen oder auf Modus 1 wechseln.
+Betrifft nur die Anmeldung per Session-Cookie, mit Benutzername und Passwort meldet sich pylanis selbst neu an. Einen neuen Session-Cookie eintragen oder auf Benutzername und Passwort wechseln.
 
-### „App nicht verfügbar an deiner Schule"
+### App an der Schule nicht verfügbar
 
-Nicht alle Schulen haben alle Lanis-Module aktiviert. Mit `get_available_apps` kannst du prüfen, welche der unterstützten Apps an deiner Schule freigeschaltet sind.
+Nicht alle Schulen haben alle Lanis-Module aktiviert. `lanis available-apps` (bzw. `get_available_apps`) zeigt, welche der unterstützten Apps freigeschaltet sind.
 
-### Kein Vertretungsplan verfügbar
+### Kein Vertretungsplan
 
-Der Vertretungsplan ist nur an Schultagen verfügbar. An Wochenenden und Feiertagen gibt es keinen Plan.
+Den Vertretungsplan gibt es nur an Schultagen, nicht an Wochenenden und Feiertagen. Manche Schulen zeigen die App „Vertretungsplan" an, nutzen sie aber nicht. Dann meldet pylanis, dass keine Vertretungsdaten vorliegen.
 
-Manche Schulen zeigen die App „Vertretungsplan“ an, nutzen sie aber nicht. Dann meldet `get_substitution_plan`, dass keine Vertretungsdaten vorliegen.
+### Keine Termine gefunden
 
-### Keine Termine / Aufgaben gefunden
-
-Prüfe, ob du den richtigen Zeitraum angegeben hast. Für den Kalender müssen `start` und `end` im Format `JJJJ-MM-TT` angegeben werden.
+Prüfe den Zeitraum. `start` und `end` müssen im Format `JJJJ-MM-TT` angegeben werden.
 
 ### Verbindungsfehler
 
-Stelle sicher, dass die Umgebungsvariablen in der Claude Desktop Konfiguration korrekt gesetzt sind und dass du Zugang zum Schulportal Hessen hast (ggf. VPN oder Schulnetzwerk erforderlich).
+Prüfe die Zugangsdaten (beim MCP-Server die Umgebungsvariablen in der Client-Konfiguration) und ob du Zugang zum Schulportal Hessen hast (ggf. VPN oder Schulnetzwerk erforderlich).
+
+---
 
 ## Lizenz
 
