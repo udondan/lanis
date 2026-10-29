@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pylanis"
-version = "0.2.0"
+version = "0.2.1"
 description = "MCP server for Schulportal Hessen (Lanis), with SDK and CLI to follow"
 readme = "README.md"
 license = "MIT"
