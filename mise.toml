@@ -3,6 +3,11 @@ jobs = 1
 
 [tools]
 python = "3.14"
+# Linters of the Actions CI job, which installs only these three.
+actionlint = "1.7.12"
+# The runner's own shellcheck is older and reports differently. actionlint runs it over every `run:` block.
+shellcheck = "0.11.0"
+zizmor = "1.31.1"
 
 [tasks.setup]
 description = "Bootstrap the virtual environment"
