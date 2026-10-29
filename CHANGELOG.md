@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/udondan/pylanis/compare/v1.0.0...v1.1.0) (2026-10-29)
+
+
+### Features
+
+* publish the Docker image udondan/lanis to Docker Hub ([#50](https://github.com/udondan/pylanis/issues/50)) ([49612f2](https://github.com/udondan/pylanis/commit/49612f2861e0f1d0ebb313d8ce57c6afad8a9267))
+
+
+### Dependencies
+
+* **deps:** update docker/login-action action to v4.7.0 ([#52](https://github.com/udondan/pylanis/issues/52)) ([0cc12f7](https://github.com/udondan/pylanis/commit/0cc12f70b1e50fea40a2bc586f1fa0353655ff82))
+
 ## [1.0.0](https://github.com/udondan/pylanis/compare/v0.2.1...v1.0.0) (2026-10-29)
 
 
