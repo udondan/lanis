@@ -37,7 +37,7 @@ run = ".venv/bin/ruff format src/ tests/"
 
 [tasks.docker-build]
 description = "Build the Docker image"
-run = "docker build -t mcp/lanis-mcp ."
+run = "docker build -t udondan/lanis ."
 
 [tasks.docker-register]
 description = "Add the server to a Docker MCP Toolkit profile (created if missing)"

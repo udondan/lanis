@@ -2,7 +2,7 @@
 # Add it to a profile with `mise run docker-register` (see README, section Docker MCP Toolkit).
 name: lanis-mcp
 type: server
-image: mcp/lanis-mcp:latest
+image: udondan/lanis:latest
 title: Lanis (Schulportal Hessen)
 description: Vertretungsplan, Stundenplan, Kalender, Aufgaben, Nachrichten und Dateien aus dem Schulportal Hessen (Lanis)
 secrets:
