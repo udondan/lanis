@@ -2,6 +2,8 @@
 
 This is a Python MCP (Model Context Protocol) server that exposes the German school
 portal "Schulportal Hessen (Lanis)" as LLM-callable tools via the MCP Python SDK (MCPServer).
+It is published on PyPI as `pylanis` (repo `udondan/pylanis`); the console script and the
+import package keep the names `lanis-mcp` and `lanis_mcp`.
 
 ## Project Layout
 
@@ -215,6 +217,16 @@ Separate logical sections (one per tool or group) with a divider comment:
 - A spell-checker runs on commit; add missing words with `dict-add <word>`
 - Always show `git diff` and confirm the commit message before committing
 - Never push without explicit confirmation
+
+## Releases
+
+- release-please keeps a release PR (`chore: release x.y.z`) open that bumps the version in
+  `pyproject.toml` and updates `CHANGELOG.md`. `feat:` and `fix:` commits trigger a release.
+- Every Monday the release PR is set to auto-merge. Merging it creates the GitHub release.
+- The release starts `publish.yml`, which builds the package and uploads it to PyPI as
+  `pylanis` via Trusted Publishing (GitHub environment `pypi`).
+- CI runs the live integration tests one run at a time (`udondan/wait-for-turn`),
+  because all runs share one Lanis account.
 
 ## Key Architectural Notes
 

@@ -1,18 +1,20 @@
-# lanis-mcp
+# pylanis
 
 Ein [MCP-Server](https://modelcontextprotocol.io/) für das **Schulportal Hessen (Lanis)**, der KI-Assistenten wie Claude ermöglicht, direkt auf Schulinformationen zuzugreifen – Vertretungsplan, Kalender, Hausaufgaben, Nachrichten und mehr.
 
 ---
 
-## Was ist lanis-mcp?
+## Was ist pylanis?
 
-`lanis-mcp` verbindet deine KI (z. B. Claude) mit dem [Schulportal Hessen](https://start.schulportal.hessen.de/). Sobald der Server eingerichtet ist, kannst du deiner KI ganz natürlich Fragen stellen wie:
+`pylanis` verbindet deine KI (z. B. Claude) mit dem [Schulportal Hessen](https://start.schulportal.hessen.de/). Sobald der Server eingerichtet ist, kannst du deiner KI ganz natürlich Fragen stellen wie:
 
 > „Was steht heute im Vertretungsplan?"
 > „Welche Hausaufgaben habe ich diese Woche?"
 > „Zeig mir alle Termine im April."
 
 Der Server kommuniziert über das standardisierte MCP-Protokoll und ist **ausschließlich lesend** – er verändert keine Daten im Schulportal.
+
+Das Paket wird auf [PyPI](https://pypi.org/project/pylanis/) als `pylanis` veröffentlicht. Bisher enthält es den MCP-Server (Befehl `lanis-mcp`). Ein Python-SDK und ein Kommandozeilenwerkzeug für das Schulportal sollen folgen.
 
 ---
 
@@ -51,7 +53,7 @@ Füge einen Eintrag unter `mcpServers` hinzu. Wähle einen der drei Authentifizi
   "mcpServers": {
     "lanis": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/udondan/lanis-mcp", "lanis-mcp"],
+      "args": ["--from", "pylanis", "lanis-mcp"],
       "env": {
         "LANIS_SCHOOL_ID": "1234",
         "LANIS_USERNAME": "vorname.nachname",
@@ -69,7 +71,7 @@ Füge einen Eintrag unter `mcpServers` hinzu. Wähle einen der drei Authentifizi
   "mcpServers": {
     "lanis": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/udondan/lanis-mcp", "lanis-mcp"],
+      "args": ["--from", "pylanis", "lanis-mcp"],
       "env": {
         "LANIS_SCHOOL_ID": "1234",
         "LANIS_SESSION_ID": "dein-session-cookie"
@@ -88,7 +90,7 @@ Füge einen Eintrag unter `mcpServers` hinzu. Wähle einen der drei Authentifizi
   "mcpServers": {
     "lanis": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/udondan/lanis-mcp", "lanis-mcp"],
+      "args": ["--from", "pylanis", "lanis-mcp"],
       "env": {
         "LANIS_SCHOOL_NAME": "Mustergymnasium",
         "LANIS_SCHOOL_CITY": "Musterstadt",
