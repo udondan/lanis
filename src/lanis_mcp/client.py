@@ -6,10 +6,11 @@ from difflib import SequenceMatcher
 from typing import Optional
 
 import httpx
-from lanisapi import LanisClient, LanisAccount, LanisCookie, School
-from lanisapi.helpers import authentication as _auth
-from lanisapi.helpers.request import Request as _Request
-from lanisapi.constants import LOGGER as _LOGGER
+
+from lanis_mcp.lanisapi import LanisClient, LanisAccount, LanisCookie, School
+from lanis_mcp.lanisapi.helpers import authentication as _auth
+from lanis_mcp.lanisapi.helpers.request import Request as _Request
+from lanis_mcp.lanisapi.constants import LOGGER as _LOGGER
 
 
 def _fixed_get_authentication_sid(
@@ -48,8 +49,8 @@ def _fixed_get_authentication_sid(
 
 
 # Patch into lanisapi.client's namespace (where _create_new_session resolves it)
-import lanisapi.client as _lanisapi_client  # noqa: E402
-import lanisapi.functions.apps as _lanisapi_apps  # noqa: E402
+import lanis_mcp.lanisapi.client as _lanisapi_client  # noqa: E402
+import lanis_mcp.lanisapi.functions.apps as _lanisapi_apps  # noqa: E402
 
 _auth.get_authentication_sid = _fixed_get_authentication_sid
 _lanisapi_client.get_authentication_sid = _fixed_get_authentication_sid
@@ -106,8 +107,8 @@ _lanisapi_apps._get_available_apps = _fixed_get_available_apps
 # Monkey-patch: _get_substitutions — handle a plan without data
 # ---------------------------------------------------------------------------
 
-import lanisapi.functions.substitution as _lanisapi_substitution  # noqa: E402
-from lanisapi.exceptions import AppNotAvailableError  # noqa: E402
+import lanis_mcp.lanisapi.functions.substitution as _lanisapi_substitution  # noqa: E402
+from lanis_mcp.lanisapi.exceptions import AppNotAvailableError  # noqa: E402
 
 
 def _fixed_get_substitutions() -> _lanisapi_substitution.SubstitutionPlan:

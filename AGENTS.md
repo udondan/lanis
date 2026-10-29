@@ -12,6 +12,7 @@ src/lanis_mcp/
   __init__.py      # package marker
   client.py        # LanisClient singleton: lazy init, auth, session mgmt, monkey-patch
   server.py        # MCPServer: all @mcp.tool definitions + shared helpers
+  lanisapi/        # vendored LanisAPI 0.4.1 (MIT, Dacjan Gapinski), keep its LICENSE
 tests/
   test_lanis.py    # integration tests (require live credentials)
 pyproject.toml     # single source of truth for build, deps, and tool config
@@ -113,11 +114,11 @@ No other linters or type checkers are currently configured (no mypy, pylint, bla
 Order imports in three groups separated by blank lines:
 
 1. Standard library (`os`, `json`, `datetime`, `enum`, `typing`)
-2. Third-party (`mcp`, `pydantic`, `lanisapi`, `httpx`)
-3. Local (`from lanis_mcp.client import ...`)
+2. Third-party (`mcp`, `pydantic`, `httpx`)
+3. Local (`from lanis_mcp.client import ...`, `from lanis_mcp.lanisapi import ...`)
 
-Use `import X as _X` for internal/private third-party imports that should not
-be part of the public namespace (e.g., `import lanisapi.client as _lanisapi_client`).
+Use `import X as _X` for internal/private imports that should not
+be part of the public namespace (e.g., `import lanis_mcp.lanisapi.client as _lanisapi_client`).
 
 ### Naming Conventions
 
@@ -231,7 +232,10 @@ Separate logical sections (one per tool or group) with a divider comment:
 ## Key Architectural Notes
 
 - `_client` in `client.py` is a module-level singleton; use `get_client()` and `reset_client()`
-- `client.py` monkey-patches `lanisapi` at import time to fix a cookie-parsing bug — do not remove
+- `src/lanis_mcp/lanisapi/` is a copy of the archived LanisAPI 0.4.1 (upstream tag `v0.4.1`,
+  commit `a83151e`). It is MIT licensed by Dacjan Gapinski: keep `src/lanis_mcp/lanisapi/LICENSE`
+  and its entry in `license-files` in `pyproject.toml`
+- `client.py` monkey-patches `lanis_mcp.lanisapi` at import time to fix a cookie-parsing bug — do not remove
 - `tests/test_lanis.py` calls `os.chdir()` at module load time (before any imports) so that
   `lanisapi`'s `session.json` is written to a temp directory instead of the project root
 - `CHARACTER_LIMIT = 25_000` guards all responses; never bypass `_truncate()`

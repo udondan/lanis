@@ -17,3 +17,8 @@ coverage:
       default:
         # At least 80 % of the lines a pull request changes must be tested.
         target: 80%
+
+# The vendored LanisAPI 0.4.1 is added unchanged and without tests. Remove this
+# once the refactoring of src/lanis_mcp/lanisapi/ adds offline tests for it.
+ignore:
+  - "src/lanis_mcp/lanisapi/**"
