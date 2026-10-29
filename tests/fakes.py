@@ -1,32 +1,36 @@
-"""Fake lanisapi objects and Lanis HTML pages for unit tests.
+"""Fake Lanis data and pages for unit tests.
 
-They stand in for the real portal, so the SDK, CLI and MCP server can be
-tested without credentials.
+FakeLanisClient stands in for pylanis.lanisapi.LanisClient and returns the
+library's own models, so the SDK, CLI and MCP server can be tested without
+credentials or network.
 """
 
 from datetime import date, datetime
 from types import SimpleNamespace
 from typing import Any, Optional
 
+from pylanis.lanisapi import (
+    App,
+    Calendar,
+    Conversation,
+    Event,
+    Folder,
+    SchoolInfo,
+    Substitution,
+    SubstitutionPlan,
+    Task,
+)
 
-def _responsible_ok() -> str:
-    return "Frau Muster"
-
-
-def _responsible_fails() -> str:
-    raise RuntimeError("lookup failed")
-
-
-SCHOOLS: list[dict[str, Any]] = [
-    {"Id": "1234", "Name": "Mustergymnasium", "Ort": "Musterstadt"},
-    {"Id": "5678", "Name": "Beispielschule", "Ort": None},
+SCHOOLS = [
+    SchoolInfo(id="1234", name="Mustergymnasium", city="Musterstadt"),
+    SchoolInfo(id="5678", name="Beispielschule", city=""),
 ]
 
-SUBSTITUTION_PLAN = SimpleNamespace(
+SUBSTITUTION_PLAN = SubstitutionPlan(
     date=date(2026, 10, 29),
     info="Heute verkürzter Unterricht",
     substitutions=[
-        SimpleNamespace(
+        Substitution(
             substitute="MÜL",
             teacher="SCH",
             hours="3-4",
@@ -35,43 +39,50 @@ SUBSTITUTION_PLAN = SimpleNamespace(
             room="A101",
             notice="Aufgaben im Raum",
         ),
-        SimpleNamespace(
-            substitute=None,
+        Substitution(
+            substitute="",
             teacher="WEB",
             hours="5",
             class_name="8a",
-            subject=None,
-            room=None,
+            subject="",
+            room="",
             notice=None,
         ),
     ],
 )
 
+EMPTY_SUBSTITUTION_PLAN = SubstitutionPlan(date=date(2026, 10, 29), info=None)
+
 CALENDAR_EVENTS = [
-    SimpleNamespace(
+    Event(
+        id="e1",
         title="Elternabend",
         description="Für alle 7. Klassen",
         place="Aula",
         start=datetime(2026, 11, 3, 19, 0),
         end=datetime(2026, 11, 3, 21, 0),
         whole_day=False,
-        responsible=_responsible_ok,
+        has_responsible=True,
     ),
-    SimpleNamespace(
-        title=None,
-        description=None,
-        place=None,
-        start=date(2026, 11, 10),
-        end=date(2026, 11, 10),
+    Event(
+        id="e2",
+        title="",
+        description="",
+        place="",
+        start=datetime(2026, 11, 10),
+        end=datetime(2026, 11, 10),
         whole_day=True,
-        responsible=_responsible_fails,
+        has_responsible=True,
     ),
 ]
 
+# The responsible person per event id; looking up any other event fails.
+RESPONSIBLE = {"e1": "Frau Muster"}
+
 TASKS = [
-    SimpleNamespace(
+    Task(
         title="Arbeitsblatt Brüche",
-        date=date(2026, 10, 28),
+        date=datetime(2026, 10, 28),
         subject_name="Mathematik",
         teacher="Herr Schmidt",
         description="Seite 12",
@@ -79,57 +90,57 @@ TASKS = [
         attachment=["blatt.pdf", "loesung.pdf"],
         attachment_url="https://example.com/download.zip",
     ),
-    SimpleNamespace(
+    Task(
         title=None,
         date=None,
         subject_name="Deutsch",
         teacher=None,
         description=None,
         details=None,
-        attachment=None,
+        attachment=[],
         attachment_url=None,
     ),
 ]
 
 CONVERSATIONS = [
-    SimpleNamespace(
+    Conversation(
         id="42",
         title="Klassenfahrt",
         teacher="Frau Muster",
-        creation_date="28.10.2026",
-        newest_date="29.10.2026",
+        creation_date=datetime(2026, 10, 28, 9, 15),
+        newest_date=datetime(2026, 10, 29, 7, 30),
         unread=True,
-        receivers=["Eltern 7b"],
         special_receivers=["Klasse 7b"],
+        receivers=["Eltern 7b"],
         content="x" * 600,
     ),
-    SimpleNamespace(
+    Conversation(
         id="43",
         title="Info",
         teacher="Herr Schmidt",
-        creation_date="27.10.2026",
-        newest_date="27.10.2026",
+        creation_date=None,
+        newest_date=datetime(2026, 10, 27, 12, 0),
         unread=False,
-        receivers=None,
         special_receivers=None,
+        receivers=[],
         content=None,
     ),
 ]
 
 FOLDERS = [
-    SimpleNamespace(name="Organisation", symbol="fa-folder", colour="#ff0000"),
-    SimpleNamespace(name="Lernen", symbol=None, colour=None),
+    Folder(name="Organisation", symbol="fa-folder", colour="#ff0000"),
+    Folder(name="Lernen", symbol="", colour=None),
 ]
 
 APPS = [
-    SimpleNamespace(
+    App(
         name="Kalender",
-        link="kalender.php",
         colour="#00ff00",
-        symbol="fa-calendar",
         folder=[FOLDERS[0]],
+        link="kalender.php",
+        symbol="fa-calendar",
     ),
-    SimpleNamespace(name="Moodle", link=None, colour=None, symbol=None, folder=None),
+    App(name="Moodle", colour="", folder=[], link="", symbol=""),
 ]
 
 AVAILABLE_APPS = ["Kalender", "Mein Unterricht"]
@@ -254,27 +265,22 @@ PAGES: dict[str, str] = {
 }
 
 
-class FakeHttpClient:
-    """Stands in for lanisapi's shared httpx client."""
-
-    def __init__(self, pages: Optional[dict[str, str]] = None) -> None:
-        self.pages = dict(PAGES if pages is None else pages)
-
-    def get(
-        self, url: str, params: Optional[dict[str, str]] = None, **_: Any
-    ) -> SimpleNamespace:
-        key = url.rsplit("/", 1)[-1]
-        if params and params.get("folder"):
-            key = f"{key}?folder={params['folder']}"
-        return SimpleNamespace(text=self.pages.get(key, "<html></html>"))
+EMPTY_PAGES: dict[str, str] = {
+    **PAGES,
+    "stundenplan.php": "<html></html>",
+    "lerngruppen.php": "<html></html>",
+    "dateiverteilung.php": FILE_DISTRIBUTION_EMPTY_HTML,
+    "wahl.php": VOTES_EMPTY_HTML,
+}
 
 
 class FakeLanisClient:
-    """Stands in for lanisapi.LanisClient."""
+    """Stands in for pylanis.lanisapi.LanisClient."""
 
     def __init__(self, empty: bool = False) -> None:
         self.empty = empty
         self.authenticated = True
+        self.pages = EMPTY_PAGES if empty else PAGES
         self.calls: list[tuple[str, tuple[Any, ...]]] = []
 
     def _record(self, name: str, *args: Any) -> None:
@@ -286,29 +292,47 @@ class FakeLanisClient:
     def close(self) -> None:
         self._record("close")
 
-    def get_substitution_plan(self) -> SimpleNamespace:
+    def get_page(
+        self, url: str, params: Optional[dict[str, str]] = None
+    ) -> SimpleNamespace:
+        self._record("get_page", url, params)
+        key = url.rsplit("/", 1)[-1]
+        if params and params.get("folder"):
+            key = f"{key}?folder={params['folder']}"
+        return SimpleNamespace(text=self.pages.get(key, "<html></html>"))
+
+    def get_substitution_plan(self) -> SubstitutionPlan:
         self._record("get_substitution_plan")
-        if self.empty:
-            return SimpleNamespace(date=None, info=None, substitutions=None)
-        return SUBSTITUTION_PLAN
+        return EMPTY_SUBSTITUTION_PLAN if self.empty else SUBSTITUTION_PLAN
 
-    def get_calendar(self, start: datetime, end: datetime) -> SimpleNamespace:
+    def _calendar(self, start: datetime, end: datetime) -> Calendar:
+        return Calendar(
+            start=start, end=end, events=[] if self.empty else list(CALENDAR_EVENTS)
+        )
+
+    def get_calendar(self, start: datetime, end: datetime) -> Calendar:
         self._record("get_calendar", start, end)
-        return SimpleNamespace(events=None if self.empty else CALENDAR_EVENTS)
+        return self._calendar(start, end)
 
-    def get_calendar_of_month(self) -> SimpleNamespace:
+    def get_calendar_of_month(self) -> Calendar:
         self._record("get_calendar_of_month")
-        return SimpleNamespace(events=[] if self.empty else CALENDAR_EVENTS)
+        return self._calendar(datetime(2026, 10, 1), datetime(2026, 10, 31))
 
-    def get_tasks(self) -> list[SimpleNamespace]:
+    def get_event_responsible(self, event: Event) -> Optional[str]:
+        self._record("get_event_responsible", event.id)
+        if event.id not in RESPONSIBLE:
+            raise RuntimeError("lookup failed")
+        return RESPONSIBLE[event.id]
+
+    def get_tasks(self) -> list[Task]:
         self._record("get_tasks")
         return [] if self.empty else TASKS
 
-    def get_conversations(self, number: int = 10) -> list[SimpleNamespace]:
+    def get_conversations(self, number: int = 5) -> list[Conversation]:
         self._record("get_conversations", number)
         return [] if self.empty else CONVERSATIONS
 
-    def get_apps(self) -> list[SimpleNamespace]:
+    def get_apps(self) -> list[App]:
         self._record("get_apps")
         return [] if self.empty else APPS
 
@@ -316,16 +340,10 @@ class FakeLanisClient:
         self._record("get_available_apps")
         return [] if self.empty else AVAILABLE_APPS
 
-    def get_folders(self) -> list[SimpleNamespace]:
+    def get_folders(self) -> list[Folder]:
         self._record("get_folders")
         return [] if self.empty else FOLDERS
 
     def get_app_availability(self, name: str) -> bool:
         self._record("get_app_availability", name)
         return not self.empty and name in AVAILABLE_APPS
-
-
-EMPTY_PAGES: dict[str, str] = {
-    "dateiverteilung.php": FILE_DISTRIBUTION_EMPTY_HTML,
-    "wahl.php": VOTES_EMPTY_HTML,
-}

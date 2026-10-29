@@ -18,11 +18,12 @@ from datetime import date
 from typing import Any
 
 import pytest
-from lanisapi.exceptions import AppNotAvailableError
 
 from pylanis import Lanis
 from pylanis import mcp as srv
 from pylanis.formatting import ResponseFormat
+from pylanis.lanisapi import AppNotAvailableError
+from pylanis.lanisapi.cryption import Cryptor
 
 _CREDENTIALS = ("LANIS_SCHOOL_ID", "LANIS_USERNAME", "LANIS_PASSWORD")
 
@@ -50,6 +51,24 @@ def _assert_ok(result: str) -> None:
 
 def test_authenticate(lanis):
     assert lanis._ensure_client().authenticated
+
+
+def test_relogin_after_session_expired(lanis):
+    """An invalid session id is replaced by a new login on the next request."""
+    client = lanis._ensure_client()
+    client.session.set_session_cookies(os.environ["LANIS_SCHOOL_ID"], "invalid")
+    client._apps_data = None
+
+    assert lanis.get_apps(), "No apps after logging in again"
+    cookies = client.authentication_cookies
+    assert cookies is not None and cookies.session_id != "invalid"
+
+
+def test_encryption_handshake(lanis):
+    """The RSA/AES handshake for the Nachrichten app succeeds."""
+    cryptor = Cryptor()
+    cryptor.handshake(lanis._ensure_client().session)
+    assert cryptor.authenticated
 
 
 def test_schools():

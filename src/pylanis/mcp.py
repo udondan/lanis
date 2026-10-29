@@ -19,6 +19,7 @@ from pylanis import formatting
 from pylanis.client import SUPPORTED_APPS, Lanis
 from pylanis.errors import SessionExpiredError
 from pylanis.formatting import ResponseFormat, View, truncate
+from pylanis.lanisapi import LoginPageRedirectError
 
 mcp = MCPServer("lanis_mcp")
 
@@ -41,10 +42,7 @@ def _lanis() -> Lanis:
 
 def _handle_error(e: Exception) -> str:
     """Return a consistent, human-readable error string."""
-    if (
-        isinstance(e, SessionExpiredError)
-        or "ForceNewAuthentication" in type(e).__name__
-    ):
+    if isinstance(e, (SessionExpiredError, LoginPageRedirectError)):
         if _active is not None:
             _active.reset()
         return (

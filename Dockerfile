@@ -1,9 +1,7 @@
 FROM python:3.14-alpine AS builder
 
-RUN apk add --no-cache gcc musl-dev
-
 WORKDIR /build
-COPY pyproject.toml .
+COPY pyproject.toml README.md LICENSE ./
 COPY src/ src/
 RUN pip install --no-cache-dir --prefix=/install .
 

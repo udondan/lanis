@@ -4,10 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pylanis"
-version = "0.2.0"
+version = "0.2.1"
 description = "SDK, CLI, and MCP server for Schulportal Hessen (Lanis)"
 readme = "README.md"
 license = "MIT"
+# The second file covers the vendored LanisAPI in src/pylanis/lanisapi/.
+license-files = ["LICENSE", "src/pylanis/lanisapi/LICENSE"]
 authors = [{ name = "Daniel Schroeder", email = "deemes79@googlemail.com" }]
 keywords = ["lanis", "schulportal", "hessen", "sdk", "cli", "mcp", "mcp-server", "school", "vertretungsplan"]
 classifiers = [
@@ -21,9 +23,10 @@ classifiers = [
 requires-python = ">=3.11"
 dependencies = [
     "mcp[cli]==2.3.0",
-    "lanisapi==0.4.1",
-    # lanisapi imports selectolax.parser, which selectolax 1.0 removed.
-    "selectolax==0.4.13",
+    # Dependencies of the vendored LanisAPI (src/pylanis/lanisapi/).
+    "httpx==0.28.1",
+    "pycryptodomex==3.24.1",
+    "selectolax==1.0.2",
 ]
 
 [project.urls]
@@ -59,8 +62,3 @@ select = ["E4", "E7", "E9", "F"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-filterwarnings = [
-    # lanisapi passes cookies per-request to httpx, which is deprecated in newer
-    # httpx versions. This is a third-party issue we cannot fix upstream.
-    "ignore::DeprecationWarning:httpx",
-]

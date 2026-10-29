@@ -2,7 +2,7 @@
 jobs = 1
 
 [tools]
-python = "3.14"
+python = "3.15.2"
 # Linters of the Actions CI job, which installs only these three.
 actionlint = "1.7.12"
 # The runner's own shellcheck is older and reports differently. actionlint runs it over every `run:` block.

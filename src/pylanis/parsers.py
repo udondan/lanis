@@ -1,4 +1,4 @@
-"""Parsers for the Lanis pages that lanisapi does not cover.
+"""Parsers for the Lanis pages that the vendored lanisapi does not cover.
 
 Each function takes the HTML of one page and returns pylanis models. They do
 no HTTP requests, so they can be tested with plain HTML.
@@ -7,7 +7,7 @@ no HTTP requests, so they can be tested with plain HTML.
 import re
 from typing import Any, Optional
 
-from selectolax.parser import HTMLParser as _HTMLParser
+from selectolax.lexbor import LexborHTMLParser as _HTMLParser
 
 from pylanis.models import (
     DistributedFile,

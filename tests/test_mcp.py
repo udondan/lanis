@@ -13,12 +13,12 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from lanisapi.exceptions import ForceNewAuthenticationError
 
 from conftest import make_lanis
 from pylanis import formatting
 from pylanis import mcp as srv
 from pylanis.formatting import CHARACTER_LIMIT, ResponseFormat
+from pylanis.lanisapi import LoginPageRedirectError
 
 GOLDEN = json.loads((Path(__file__).parent / "data" / "mcp_golden.json").read_text())
 
@@ -128,7 +128,7 @@ def test_calendar_input_rejects_bad_pattern():
 class TestErrors:
     def test_session_expired(self, active):
         fake = MagicMock()
-        fake.get_tasks.side_effect = ForceNewAuthenticationError()
+        fake.get_tasks.side_effect = LoginPageRedirectError("login page")
         lanis = active(make_lanis(fake))
         result = run(srv.lanis_get_tasks(ResponseFormat.MARKDOWN))
         assert result == (
@@ -137,10 +137,10 @@ class TestErrors:
         )
         assert lanis._client is None
 
-    def test_raw_force_new_authentication(self, active):
+    def test_raw_login_page_redirect(self, active):
         lanis = active(make_lanis())
         with patch.object(lanis, "reset") as reset:
-            result = srv._handle_error(ForceNewAuthenticationError())
+            result = srv._handle_error(LoginPageRedirectError("login page"))
         assert result.startswith("Error: Session expired.")
         reset.assert_called_once()
 
@@ -207,6 +207,15 @@ class TestErrors:
         active(None)
         result = run(srv.lanis_check_app_availability("Quatsch"))
         assert result.startswith('Error: Unknown app "Quatsch"')
+
+
+class TestFormatting:
+    def test_datetime_formats(self):
+        assert formatting._fmt_datetime(datetime(2026, 11, 3, 19, 0)) == (
+            "2026-11-03 19:00"
+        )
+        assert formatting._fmt_datetime(datetime(2026, 11, 3).date()) == "2026-11-03"
+        assert formatting._fmt_datetime(None) == ""
 
 
 class TestServer:

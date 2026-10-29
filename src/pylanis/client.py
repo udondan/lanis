@@ -2,15 +2,21 @@
 
 import os
 from datetime import date, datetime
+from pathlib import Path
 from typing import Any, Callable, Optional, TypeVar, Union
 
-from lanisapi import LanisAccount, LanisClient, LanisCookie, School as _LanisSchool
-from lanisapi.exceptions import ForceNewAuthenticationError
-import lanisapi.functions.schools as _lanisapi_schools
-from lanisapi.helpers.request import Request as _Request
-
-from pylanis import _patches  # noqa: F401  (applies the lanisapi fixes)
 from pylanis import parsers
+from pylanis.lanisapi import (
+    FileSessionStore,
+    LanisAccount,
+    LanisClient,
+    LanisCookie,
+    LoginPageRedirectError,
+    MemorySessionStore,
+    School as _LanisSchool,
+    SessionStore,
+    list_schools,
+)
 from pylanis.errors import ConfigurationError, SessionExpiredError
 from pylanis.models import (
     App,
@@ -34,7 +40,7 @@ SUPPORTED_APPS = [
     "Nachrichten - Beta-Version",
     "Vertretungsplan",
 ]
-"""The Lanis apps lanisapi can read, as accepted by ``Lanis.is_app_available``."""
+"""The Lanis apps pylanis can read, as accepted by ``Lanis.is_app_available``."""
 
 _T = TypeVar("_T")
 
@@ -49,10 +55,10 @@ def _to_date(value: Any) -> Optional[Union[datetime, date]]:
     return value if isinstance(value, (datetime, date)) else None
 
 
-def _responsible(event: Any) -> str:
+def _responsible(client: LanisClient, event: Any) -> str:
     """Look up the person responsible for a calendar event ("" on failure)."""
     try:
-        return _to_str(event.responsible())
+        return _to_str(client.get_event_responsible(event))
     except Exception:
         return ""
 
@@ -67,8 +73,10 @@ class Lanis:
         Lanis(school_name="Mustergymnasium", school_city="Musterstadt",
               username="vorname.nachname", password="...")
 
-    The login happens on the first call that needs it. lanisapi keeps its HTTP
-    session in global state, so use one logged-in account per process.
+    The login happens on the first call that needs it. With a username and
+    password, a new login happens by itself when the session ends. With
+    ``data_dir`` the session is kept in ``<data_dir>/session.json``, so the
+    next process can reuse it; otherwise it stays in memory.
     """
 
     def __init__(
@@ -104,7 +112,7 @@ class Lanis:
                 "  - (LANIS_SCHOOL_ID or LANIS_SCHOOL_NAME + LANIS_SCHOOL_CITY) "
                 "+ LANIS_USERNAME + LANIS_PASSWORD"
             )
-        self._data_dir = data_dir or "/tmp"
+        self._data_dir = data_dir
         self._client: Optional[LanisClient] = None
 
     @classmethod
@@ -129,15 +137,16 @@ class Lanis:
     # Session handling
     # ------------------------------------------------------------------
 
+    def _session_store(self) -> SessionStore:
+        """Keep the session in data_dir if set, so a restart needs no new login."""
+        if self._data_dir:
+            return FileSessionStore(Path(self._data_dir) / "session.json")
+        return MemorySessionStore()
+
     def _ensure_client(self) -> LanisClient:
-        """Return the logged-in lanisapi client, logging in on first use."""
+        """Return the logged-in client, logging in on first use."""
         if self._client is None:
-            # lanisapi writes html_logs.txt and session.json into the CWD.
-            # Switch to a writable directory first so this works in Docker
-            # containers with a read-only root filesystem.
-            os.makedirs(self._data_dir, exist_ok=True)
-            os.chdir(self._data_dir)
-            client = LanisClient(self._auth)
+            client = LanisClient(self._auth, store=self._session_store())
             client.authenticate()
             self._client = client
         return self._client
@@ -152,10 +161,14 @@ class Lanis:
             self._client = None
 
     def _call(self, fn: Callable[[LanisClient], _T]) -> _T:
-        """Run fn with the logged-in client; reset on an expired session."""
+        """Run fn with the logged-in client; reset on an expired session.
+
+        Account logins renew the session by themselves, so this only happens
+        with an expired session_id.
+        """
         try:
             return fn(self._ensure_client())
-        except ForceNewAuthenticationError as e:
+        except LoginPageRedirectError as e:
             self.reset()
             raise SessionExpiredError(
                 "Session expired. The client has been reset. Please retry the request."
@@ -164,15 +177,8 @@ class Lanis:
     def _get_page(self, page: str, params: Optional[dict[str, str]] = None) -> str:
         """Fetch a Lanis page with the logged-in session and return its HTML."""
 
-        def fetch(_: LanisClient) -> str:
-            response = _Request.client.get(
-                f"{parsers.LANIS_BASE_URL}/{page}",
-                params=params or {},
-                follow_redirects=True,
-            )
-            return response.text
-
-        return self._call(fetch)
+        url = f"{parsers.LANIS_BASE_URL}/{page}"
+        return self._call(lambda c: c.get_page(url, params=params).text)
 
     # ------------------------------------------------------------------
     # Data
@@ -182,12 +188,8 @@ class Lanis:
     def get_schools() -> list[School]:
         """Return all schools in Schulportal Hessen. Needs no login."""
         return [
-            School(
-                id=_to_str(s.get("Id")),
-                name=_to_str(s.get("Name")),
-                city=_to_str(s.get("Ort")),
-            )
-            for s in _lanisapi_schools._get_schools() or []
+            School(id=_to_str(s.id), name=_to_str(s.name), city=_to_str(s.city))
+            for s in list_schools()
         ]
 
     def get_substitution_plan(self) -> SubstitutionPlan:
@@ -211,7 +213,9 @@ class Lanis:
         )
 
     @staticmethod
-    def _events(events: Any, include_responsible: bool) -> list[CalendarEvent]:
+    def _events(
+        client: LanisClient, events: Any, include_responsible: bool
+    ) -> list[CalendarEvent]:
         return [
             CalendarEvent(
                 title=_to_str(ev.title),
@@ -220,7 +224,7 @@ class Lanis:
                 start=_to_date(ev.start),
                 end=_to_date(ev.end),
                 whole_day=bool(ev.whole_day),
-                responsible=_responsible(ev) if include_responsible else None,
+                responsible=_responsible(client, ev) if include_responsible else None,
             )
             for ev in events or []
         ]
@@ -238,15 +242,21 @@ class Lanis:
         """
         start_dt = datetime(start.year, start.month, start.day)
         end_dt = datetime(end.year, end.month, end.day)
-        calendar = self._call(lambda c: c.get_calendar(start_dt, end_dt))
-        return self._events(calendar.events, include_responsible)
+        return self._call(
+            lambda c: self._events(
+                c, c.get_calendar(start_dt, end_dt).events, include_responsible
+            )
+        )
 
     def get_calendar_of_month(
         self, include_responsible: bool = False
     ) -> list[CalendarEvent]:
         """Return the calendar events of the current month."""
-        calendar = self._call(lambda c: c.get_calendar_of_month())
-        return self._events(calendar.events, include_responsible)
+        return self._call(
+            lambda c: self._events(
+                c, c.get_calendar_of_month().events, include_responsible
+            )
+        )
 
     def get_tasks(self) -> list[Task]:
         """Return the tasks and homework from "Mein Unterricht"."""

@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.1](https://github.com/udondan/pylanis/compare/v0.2.0...v0.2.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* build the Docker image again ([#45](https://github.com/udondan/pylanis/issues/45)) ([fa8cef0](https://github.com/udondan/pylanis/commit/fa8cef015a4168d867bf68bab16ddf6bc4552f1a))
+* log in again when the Lanis session ends ([#43](https://github.com/udondan/pylanis/issues/43)) ([928c70f](https://github.com/udondan/pylanis/commit/928c70f7c31259ed882b658854f68d8a006381ed))
+* never reuse the stored session of another account ([928c70f](https://github.com/udondan/pylanis/commit/928c70f7c31259ed882b658854f68d8a006381ed))
+* return all conversations when there are fewer than requested ([928c70f](https://github.com/udondan/pylanis/commit/928c70f7c31259ed882b658854f68d8a006381ed))
+
+
+### Dependencies
+
+* **deps:** update dependency python to v3.15.0 ([#27](https://github.com/udondan/pylanis/issues/27)) ([6a4829c](https://github.com/udondan/pylanis/commit/6a4829c14d2c9d8db50ad9c74f9ccde949d5ccd1))
+
 ## [0.2.0](https://github.com/udondan/pylanis/compare/v0.1.0...v0.2.0) (2026-10-29)
 
 

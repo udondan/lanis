@@ -112,6 +112,10 @@ Füge einen Eintrag unter `mcpServers` hinzu. Wähle einen der drei Authentifizi
 
 Nach dem Speichern Claude Desktop neu starten.
 
+#### Session speichern (optional)
+
+Bei Modus 1 und 3 meldet sich der Server beim Start an und bei Ablauf der Session automatisch neu an. Damit nach einem Neustart keine neue Anmeldung nötig ist, kann die Session in einer Datei gespeichert werden. Dazu `LANIS_DATA_DIR` auf ein Verzeichnis setzen, z. B. `"LANIS_DATA_DIR": "/Users/du/.local/share/pylanis"`. Der Server legt dort `session.json` an, die nur für dich lesbar ist. Ohne `LANIS_DATA_DIR` bleibt die Session nur im Speicher.
+
 ---
 
 ## Kommandozeile
@@ -177,14 +181,12 @@ for sub in plan.substitutions:
 events = lanis.get_calendar(date(2026, 11, 1), date(2026, 11, 30))
 ```
 
-Die Methoden geben Dataclasses zurück (`Task`, `SubstitutionPlan`, `CalendarEvent`, `Timetable` usw.), Datumswerte als `date`/`datetime`. `Lanis.get_schools()` braucht keine Anmeldung. Die Anmeldung passiert beim ersten Aufruf, der sie braucht.
+Die Methoden geben Dataclasses zurück (`Task`, `SubstitutionPlan`, `CalendarEvent`, `Timetable` usw.), Datumswerte als `date`/`datetime`. `Lanis.get_schools()` braucht keine Anmeldung. Die Anmeldung passiert beim ersten Aufruf, der sie braucht. Mit Benutzername und Passwort meldet sich pylanis nach Ablauf der Session selbst neu an. Mit `data_dir="..."` wird die Session in `session.json` in diesem Verzeichnis gespeichert, sonst nur im Speicher. Jede `Lanis`-Instanz hat ihre eigene Session, mehrere Konten in einem Prozess sind also möglich.
 
 Fehler:
 
 - `ConfigurationError`: Die übergebenen Zugangsdaten sind unvollständig.
-- `SessionExpiredError`: Die Sitzung ist abgelaufen und wurde zurückgesetzt; der nächste Aufruf meldet sich neu an.
-
-> **Hinweis:** `lanisapi`, auf dem pylanis aufbaut, hält die Sitzung global. Pro Prozess sollte daher nur ein angemeldetes Konto verwendet werden.
+- `SessionExpiredError`: Die Session ist abgelaufen (nur bei Anmeldung per Session-Cookie) und wurde zurückgesetzt.
 
 ---
 
@@ -376,7 +378,7 @@ Die Kommandozeile gibt standardmäßig JSON aus und mit `--format markdown` dens
 
 ### „Session abgelaufen" / Session expired
 
-Der Session-Cookie ist abgelaufen (nur bei Modus 2 relevant). Der Server setzt die Verbindung automatisch zurück. Einfach die Anfrage erneut stellen – beim nächsten Versuch wird eine neue Session aufgebaut.
+Der Session-Cookie ist abgelaufen. Das betrifft nur Modus 2, bei Modus 1 und 3 meldet sich der Server automatisch neu an. Bei Modus 2 einen neuen Session-Cookie eintragen oder auf Modus 1 wechseln.
 
 ### „App nicht verfügbar an deiner Schule"
 
@@ -395,3 +397,9 @@ Prüfe, ob du den richtigen Zeitraum angegeben hast. Für den Kalender müssen `
 ### Verbindungsfehler
 
 Stelle sicher, dass die Umgebungsvariablen in der Claude Desktop Konfiguration korrekt gesetzt sind und dass du Zugang zum Schulportal Hessen hast (ggf. VPN oder Schulnetzwerk erforderlich).
+
+## Lizenz
+
+pylanis steht unter der [MIT-Lizenz](LICENSE).
+
+Der Ordner [`src/pylanis/lanisapi/`](src/pylanis/lanisapi/) basiert auf [LanisAPI](https://github.com/lanis-mobile/LanisAPI) 0.4.1 von Dacjan Gapinski. Das Projekt wird nicht mehr weiterentwickelt; der Code wurde überarbeitet und wird hier gepflegt. LanisAPI steht ebenfalls unter der MIT-Lizenz, siehe [`src/pylanis/lanisapi/LICENSE`](src/pylanis/lanisapi/LICENSE).

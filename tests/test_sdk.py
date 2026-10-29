@@ -1,11 +1,9 @@
-"""Tests for the Lanis SDK client against fake lanisapi objects."""
+"""Tests for the Lanis SDK client against a fake LanisClient."""
 
 from datetime import date, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-from lanisapi import LanisAccount, LanisCookie
-from lanisapi.exceptions import ForceNewAuthenticationError
 
 import fakes
 import pylanis
@@ -20,6 +18,13 @@ from pylanis import (
     Task,
 )
 from pylanis import client as client_module
+from pylanis.lanisapi import (
+    FileSessionStore,
+    LanisAccount,
+    LanisCookie,
+    LoginPageRedirectError,
+    MemorySessionStore,
+)
 
 
 class TestConstructor:
@@ -69,17 +74,30 @@ class TestConstructor:
 
 
 class TestSession:
-    def test_logs_in_on_first_call(self, tmp_path, monkeypatch):
-        monkeypatch.chdir(tmp_path)
+    def test_logs_in_on_first_call(self):
         fake = fakes.FakeLanisClient()
-        data_dir = tmp_path / "data"
         with patch.object(client_module, "LanisClient", return_value=fake) as cls:
-            lanis = Lanis(school_id="1", session_id="x", data_dir=str(data_dir))
+            lanis = Lanis(school_id="1", session_id="x")
             lanis.get_tasks()
             lanis.get_tasks()
-        cls.assert_called_once_with(lanis._auth)
+        cls.assert_called_once()
+        assert cls.call_args.args == (lanis._auth,)
         assert [name for name, _ in fake.calls].count("authenticate") == 1
-        assert data_dir.is_dir()
+
+    def test_session_store_in_memory_by_default(self):
+        lanis = Lanis(school_id="1", session_id="x")
+        assert isinstance(lanis._session_store(), MemorySessionStore)
+
+    def test_session_store_in_data_dir(self, tmp_path):
+        lanis = Lanis(school_id="1", session_id="x", data_dir=str(tmp_path))
+        store = lanis._session_store()
+        assert isinstance(store, FileSessionStore)
+        assert store.path == tmp_path / "session.json"
+
+    def test_client_gets_the_session_store(self, tmp_path):
+        with patch.object(client_module, "LanisClient") as cls:
+            Lanis(school_id="1", session_id="x", data_dir=str(tmp_path)).get_tasks()
+        assert cls.call_args.kwargs["store"].path == tmp_path / "session.json"
 
     def test_reset_closes_the_client(self):
         fake = fakes.FakeLanisClient()
@@ -98,7 +116,7 @@ class TestSession:
 
     def test_expired_session_resets_and_raises(self):
         fake = MagicMock()
-        fake.get_tasks.side_effect = ForceNewAuthenticationError()
+        fake.get_tasks.side_effect = LoginPageRedirectError("login page")
         lanis = make_lanis(fake)
         with pytest.raises(SessionExpiredError, match="Session expired"):
             lanis.get_tasks()
@@ -130,6 +148,18 @@ class TestData:
 
     def test_get_substitution_plan_empty(self):
         plan = make_lanis(fakes.FakeLanisClient(empty=True)).get_substitution_plan()
+        assert (plan.date, plan.info, plan.substitutions) == (
+            date(2026, 10, 29),
+            "",
+            [],
+        )
+
+    def test_get_substitution_plan_without_date(self):
+        fake = MagicMock()
+        fake.get_substitution_plan.return_value = MagicMock(
+            date=None, info=None, substitutions=None
+        )
+        plan = make_lanis(fake).get_substitution_plan()
         assert (plan.date, plan.info, plan.substitutions) == (None, "", [])
 
     def test_get_calendar(self):
@@ -145,14 +175,23 @@ class TestData:
             title="",
             description="",
             place="",
-            start=date(2026, 11, 10),
-            end=date(2026, 11, 10),
+            start=datetime(2026, 11, 10),
+            end=datetime(2026, 11, 10),
             whole_day=True,
         )
 
     def test_get_calendar_with_responsible(self):
-        events = make_lanis().get_calendar_of_month(include_responsible=True)
+        fake = fakes.FakeLanisClient()
+        events = make_lanis(fake).get_calendar_of_month(include_responsible=True)
         assert [e.responsible for e in events] == ["Frau Muster", ""]
+        assert ("get_event_responsible", ("e1",)) in fake.calls
+
+    def test_get_calendar_range_with_responsible(self):
+        lanis = make_lanis()
+        events = lanis.get_calendar(
+            date(2026, 11, 1), date(2026, 11, 30), include_responsible=True
+        )
+        assert events[0].responsible == "Frau Muster"
 
     def test_get_tasks(self):
         tasks = make_lanis().get_tasks()
@@ -171,6 +210,8 @@ class TestData:
         conversations = make_lanis(fake).get_conversations(number=3)
         assert fake.calls[-1] == ("get_conversations", (3,))
         assert conversations[0].unread is True
+        assert conversations[0].creation_date == "2026-10-28 09:15:00"
+        assert conversations[1].creation_date == ""
         assert conversations[1].receivers == []
         assert conversations[1].content == ""
 
@@ -192,21 +233,28 @@ class TestData:
             make_lanis().is_app_available("Foo")
 
     def test_scraped_pages(self, portal):
-        lanis = make_lanis(portal())
+        fake = portal()
+        lanis = make_lanis(fake)
         assert lanis.get_timetable().class_name == "05b"
         assert len(lanis.get_learning_groups()) == 2
         assert [f.id for f in lanis.get_file_storage().folders] == ["7", "8"]
         assert lanis.get_file_storage("7").folder_name == "Mathe"
         assert len(lanis.get_file_distribution()) == 2
         assert len(lanis.get_votes()) == 2
+        assert (
+            "get_page",
+            (
+                "https://start.schulportal.hessen.de/dateispeicher.php",
+                {"a": "view", "folder": "7"},
+            ),
+        ) in fake.calls
 
-    def test_scraped_page_with_expired_session(self, portal):
-        portal()
-        lanis = make_lanis()
+    def test_scraped_page_with_expired_session(self):
+        fake = fakes.FakeLanisClient()
+        lanis = make_lanis(fake)
         with patch.object(
-            client_module._Request.client,
-            "get",
-            side_effect=ForceNewAuthenticationError(),
+            fake, "get_page", side_effect=LoginPageRedirectError("login page")
         ):
             with pytest.raises(SessionExpiredError):
                 lanis.get_votes()
+        assert lanis._client is None
