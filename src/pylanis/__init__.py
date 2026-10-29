@@ -33,7 +33,7 @@ from pylanis.models import (
 try:
     __version__ = version("pylanis")
 except PackageNotFoundError:  # pragma: no cover - only when not installed
-    __version__ = "1.0.0"
+    __version__ = "1.1.0"
 
 __all__ = [
     "App",
