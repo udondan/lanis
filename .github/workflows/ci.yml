@@ -80,7 +80,7 @@ jobs:
         with:
           python-version: "3.14"
       - run: pip install -e ".[dev]"
-      - run: pytest tests/ -v --cov=lanis_mcp --cov-report=xml --cov-report=term
+      - run: pytest tests/ -v --cov=pylanis --cov-report=xml --cov-report=term
         env:
           LANIS_SCHOOL_ID: ${{ secrets.LANIS_SCHOOL_ID }}
           LANIS_USERNAME: ${{ secrets.LANIS_USERNAME }}

@@ -15,7 +15,7 @@ run = "python -m venv .venv && .venv/bin/pip install -e '.[dev]'"
 
 [tasks.server]
 description = "Run the MCP server"
-run = ".venv/bin/lanis-mcp"
+run = ".venv/bin/lanis mcp"
 
 [tasks.build]
 description = "Build the wheel"
@@ -47,4 +47,4 @@ depends = ["docker-build", "docker-register"]
 
 [tasks.inspect]
 description = "Launch the MCP inspector UI"
-run = "npx @modelcontextprotocol/inspector .venv/bin/lanis-mcp"
+run = "npx @modelcontextprotocol/inspector .venv/bin/lanis mcp"

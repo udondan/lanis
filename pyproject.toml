@@ -5,11 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "pylanis"
 version = "0.2.0"
-description = "MCP server for Schulportal Hessen (Lanis), with SDK and CLI to follow"
+description = "SDK, CLI, and MCP server for Schulportal Hessen (Lanis)"
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "Daniel Schroeder", email = "deemes79@googlemail.com" }]
-keywords = ["lanis", "schulportal", "hessen", "mcp", "mcp-server", "school", "vertretungsplan"]
+keywords = ["lanis", "schulportal", "hessen", "sdk", "cli", "mcp", "mcp-server", "school", "vertretungsplan"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
@@ -42,10 +42,10 @@ dev = [
 ]
 
 [project.scripts]
-lanis-mcp = "lanis_mcp.server:main"
+lanis = "pylanis.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/lanis_mcp"]
+packages = ["src/pylanis"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src/", "tests/", "README.md", "LICENSE", "pyproject.toml"]

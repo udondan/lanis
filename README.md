@@ -1,6 +1,6 @@
 # pylanis
 
-Ein [MCP-Server](https://modelcontextprotocol.io/) für das **Schulportal Hessen (Lanis)**, der KI-Assistenten wie Claude ermöglicht, direkt auf Schulinformationen zuzugreifen – Vertretungsplan, Kalender, Hausaufgaben, Nachrichten und mehr.
+Python-SDK, Kommandozeilenwerkzeug und [MCP-Server](https://modelcontextprotocol.io/) für das **Schulportal Hessen (Lanis)**. Damit greifen KI-Assistenten wie Claude, eigene Skripte oder du selbst im Terminal direkt auf Schulinformationen zu – Vertretungsplan, Kalender, Hausaufgaben, Nachrichten und mehr.
 
 ---
 
@@ -14,7 +14,11 @@ Ein [MCP-Server](https://modelcontextprotocol.io/) für das **Schulportal Hessen
 
 Der Server kommuniziert über das standardisierte MCP-Protokoll und ist **ausschließlich lesend** – er verändert keine Daten im Schulportal.
 
-Das Paket wird auf [PyPI](https://pypi.org/project/pylanis/) als `pylanis` veröffentlicht. Bisher enthält es den MCP-Server (Befehl `lanis-mcp`). Ein Python-SDK und ein Kommandozeilenwerkzeug für das Schulportal sollen folgen.
+Das Paket wird auf [PyPI](https://pypi.org/project/pylanis/) als `pylanis` veröffentlicht und bietet drei Zugänge:
+
+- **MCP-Server** für KI-Assistenten: `lanis mcp`
+- **Kommandozeile** für das Terminal und Skripte: `lanis <befehl>` (siehe [Kommandozeile](#kommandozeile))
+- **Python-SDK** für eigene Programme: `from pylanis import Lanis` (siehe [Python-SDK](#python-sdk))
 
 ---
 
@@ -23,7 +27,7 @@ Das Paket wird auf [PyPI](https://pypi.org/project/pylanis/) als `pylanis` verö
 - Ein aktiver **Lanis-Account** (Schulportal Hessen)
 - Die **Schul-ID** deiner Schule (siehe [Schul-ID herausfinden](#schul-id-herausfinden))
 - [`uv`](https://docs.astral.sh/uv/) installiert (modernes Python-Paketverwaltungstool)
-- Ein MCP-kompatibler Client, z. B. [Claude Desktop](https://claude.ai/download)
+- Für den MCP-Server: ein MCP-kompatibler Client, z. B. [Claude Desktop](https://claude.ai/download)
 
 ---
 
@@ -35,7 +39,11 @@ Falls du deine Schul-ID nicht kennst, kannst du sie über das Tool `get_schools`
 
 > „Suche die Schul-ID für die [Name deiner Schule] in [Stadt]."
 
-Das Tool `get_schools` benötigt **keine Anmeldung** und listet alle Schulen im Schulportal Hessen mit ihrer ID auf.
+Das Tool `get_schools` benötigt **keine Anmeldung** und listet alle Schulen im Schulportal Hessen mit ihrer ID auf. Im Terminal geht das auch ohne KI:
+
+```bash
+uvx --from pylanis lanis --format markdown schools | grep -i "musterstadt"
+```
 
 ### Claude Desktop konfigurieren
 
@@ -53,7 +61,7 @@ Füge einen Eintrag unter `mcpServers` hinzu. Wähle einen der drei Authentifizi
   "mcpServers": {
     "lanis": {
       "command": "uvx",
-      "args": ["--from", "pylanis", "lanis-mcp"],
+      "args": ["--from", "pylanis", "lanis", "mcp"],
       "env": {
         "LANIS_SCHOOL_ID": "1234",
         "LANIS_USERNAME": "vorname.nachname",
@@ -71,7 +79,7 @@ Füge einen Eintrag unter `mcpServers` hinzu. Wähle einen der drei Authentifizi
   "mcpServers": {
     "lanis": {
       "command": "uvx",
-      "args": ["--from", "pylanis", "lanis-mcp"],
+      "args": ["--from", "pylanis", "lanis", "mcp"],
       "env": {
         "LANIS_SCHOOL_ID": "1234",
         "LANIS_SESSION_ID": "dein-session-cookie"
@@ -90,7 +98,7 @@ Füge einen Eintrag unter `mcpServers` hinzu. Wähle einen der drei Authentifizi
   "mcpServers": {
     "lanis": {
       "command": "uvx",
-      "args": ["--from", "pylanis", "lanis-mcp"],
+      "args": ["--from", "pylanis", "lanis", "mcp"],
       "env": {
         "LANIS_SCHOOL_NAME": "Mustergymnasium",
         "LANIS_SCHOOL_CITY": "Musterstadt",
@@ -103,6 +111,80 @@ Füge einen Eintrag unter `mcpServers` hinzu. Wähle einen der drei Authentifizi
 ```
 
 Nach dem Speichern Claude Desktop neu starten.
+
+---
+
+## Kommandozeile
+
+Der Befehl `lanis` liest dieselben Daten wie der MCP-Server und gibt sie als JSON aus, mit `--format markdown` als lesbaren Text. Die Zugangsdaten kommen aus denselben Umgebungsvariablen wie beim MCP-Server (`LANIS_SCHOOL_ID`, `LANIS_USERNAME`, `LANIS_PASSWORD` usw.).
+
+```bash
+# Ohne Installation
+uvx --from pylanis lanis schools
+
+# Oder installieren
+uv tool install pylanis
+
+export LANIS_SCHOOL_ID=1234
+export LANIS_USERNAME=vorname.nachname
+export LANIS_PASSWORD=dein-passwort
+
+lanis substitutions
+lanis --format markdown tasks
+lanis calendar --start 2026-11-01 --end 2026-11-30
+lanis timetable | jq '.entries[] | select(.day == "Montag")'
+```
+
+| Befehl                                          | Inhalt                                                    |
+| ----------------------------------------------- | --------------------------------------------------------- |
+| `schools`                                       | Alle Schulen mit ID, Name und Stadt (ohne Anmeldung)      |
+| `substitutions`                                 | Vertretungsplan des aktuellen Schultags                   |
+| `calendar [--start --end] [--responsible]`      | Kalender; ohne `--start`/`--end` der aktuelle Monat       |
+| `tasks`                                         | Aufgaben aus „Mein Unterricht"                            |
+| `conversations [--number N]`                    | Nachrichten (Standard: 10, `-1` = alle)                   |
+| `timetable`                                     | Stundenplan                                               |
+| `learning-groups`                               | Lerngruppen/Kurse                                         |
+| `files [--folder ID]`                           | Dateispeicher; ohne `--folder` die oberste Ebene          |
+| `file-distribution`                             | Verteilte Dateien                                         |
+| `votes`                                         | Aktive Wahlen                                             |
+| `apps` / `folders`                              | App-Kacheln und Ordner auf dem Dashboard                  |
+| `available-apps` / `check-app NAME`             | Welche unterstützten Apps die Schule anbietet             |
+| `mcp`                                           | Startet den MCP-Server                                    |
+
+Fehler werden als `Error: …` auf stderr ausgegeben, der Befehl endet dann mit Exit-Code 1. `lanis --help` und `lanis <befehl> --help` zeigen alle Optionen.
+
+---
+
+## Python-SDK
+
+```python
+from datetime import date
+
+from pylanis import Lanis
+
+lanis = Lanis(school_id="1234", username="vorname.nachname", password="dein-passwort")
+# oder: Lanis(school_id="1234", session_id="dein-session-cookie")
+# oder: Lanis(school_name="Mustergymnasium", school_city="Musterstadt", username=..., password=...)
+# oder: Lanis.from_env() liest die LANIS_*-Umgebungsvariablen
+
+for task in lanis.get_tasks():
+    print(task.subject_name, task.title, task.date)
+
+plan = lanis.get_substitution_plan()
+for sub in plan.substitutions:
+    print(sub.hours, sub.class_name, sub.subject, sub.substitute)
+
+events = lanis.get_calendar(date(2026, 11, 1), date(2026, 11, 30))
+```
+
+Die Methoden geben Dataclasses zurück (`Task`, `SubstitutionPlan`, `CalendarEvent`, `Timetable` usw.), Datumswerte als `date`/`datetime`. `Lanis.get_schools()` braucht keine Anmeldung. Die Anmeldung passiert beim ersten Aufruf, der sie braucht.
+
+Fehler:
+
+- `ConfigurationError`: Die übergebenen Zugangsdaten sind unvollständig.
+- `SessionExpiredError`: Die Sitzung ist abgelaufen und wurde zurückgesetzt; der nächste Aufruf meldet sich neu an.
+
+> **Hinweis:** `lanisapi`, auf dem pylanis aufbaut, hält die Sitzung global. Pro Prozess sollte daher nur ein angemeldetes Konto verwendet werden.
 
 ---
 
@@ -273,7 +355,7 @@ Gibt es neue verteilte Dateien oder Ankündigungen?
 
 ## Ausgabeformate
 
-Die meisten Tools unterstützen zwei Ausgabeformate:
+Die meisten MCP-Tools unterstützen zwei Ausgabeformate:
 
 - **`markdown`** (Standard): Für Menschen lesbar, ideal für die direkte Anzeige in der KI-Konversation
 - **`json`**: Maschinenlesbar, nützlich wenn du die Daten weiterverarbeiten möchtest
@@ -284,7 +366,9 @@ Du kannst das Format in deiner Anfrage angeben:
 Zeig mir den Vertretungsplan als JSON.
 ```
 
-> **Hinweis:** Antworten sind auf **25.000 Zeichen** begrenzt. Bei sehr langen Ergebnissen wird die Ausgabe gekürzt und ein Hinweis angezeigt. Verwende in diesem Fall Filter (z. B. einen engeren Datumsbereich beim Kalender), um die Ergebnisse einzugrenzen.
+Die Kommandozeile gibt standardmäßig JSON aus und mit `--format markdown` denselben Text wie die MCP-Tools.
+
+> **Hinweis:** Antworten der MCP-Tools sind auf **25.000 Zeichen** begrenzt. Bei sehr langen Ergebnissen wird die Ausgabe gekürzt und ein Hinweis angezeigt. Verwende in diesem Fall Filter (z. B. einen engeren Datumsbereich beim Kalender), um die Ergebnisse einzugrenzen.
 
 ---
 
