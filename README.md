@@ -172,15 +172,38 @@ Füge einen Eintrag unter `mcpServers` hinzu. Die Umgebungsvariablen entsprechen
 
 Nach dem Speichern Claude Desktop neu starten.
 
-### Docker
+### Docker MCP Toolkit
 
-Voraussetzung: [`mise`](https://mise.jdx.dev) installiert.
+Statt `uvx` kann der Server auch als Container hinter dem [Docker MCP Toolkit](https://docs.docker.com/ai/mcp-catalog-and-toolkit/toolkit/) laufen. Der MCP Gateway von Docker Desktop startet den Container bei Bedarf und reicht die Tools an die verbundenen Clients weiter. Die Zugangsdaten liegen dabei als Secrets in Docker Desktop statt im Klartext in der Client-Konfiguration.
 
-```bash
-mise run docker-build      # Image bauen
-mise run docker-register   # im Docker MCP Katalog registrieren
-mise run docker            # beides nacheinander
-```
+Voraussetzungen: Docker Desktop mit aktiviertem MCP Toolkit, [`mise`](https://mise.jdx.dev) und ein Klon dieses Repositorys. Ein fertiges Image gibt es nicht, es wird lokal gebaut.
+
+1. Image bauen und den Server zu einem Toolkit-Profil hinzufügen:
+
+   ```bash
+   mise run docker                  # Image bauen und zum Profil "lanis" hinzufügen
+   mise run docker-register work    # zusätzlich zu einem anderen, auch bestehenden Profil
+   ```
+
+   Das Profil wird angelegt, falls es noch nicht existiert. Die Server-Definition steht in [`docker-mcp.yml`](docker-mcp.yml). Nach Änderungen am Code genügt es, den Befehl erneut auszuführen.
+
+2. Zugangsdaten als Secrets hinterlegen (siehe [Anmeldung](#anmeldung)):
+
+   ```bash
+   docker mcp secret set lanis-mcp.school_id=1234
+   docker mcp secret set lanis-mcp.username=vorname.nachname
+   docker mcp secret set lanis-mcp.password=dein-passwort
+   ```
+
+3. Einen Client mit dem Profil verbinden:
+
+   ```bash
+   docker mcp client connect claude-desktop --profile lanis
+   ```
+
+   Weitere Clients wie `claude-code`, `cursor` oder `vscode` zeigt `docker mcp client connect --help`. Alternativ geht das in Docker Desktop unter _MCP Toolkit_.
+
+`docker mcp gateway run --profile lanis --dry-run --verbose` prüft die Einrichtung, ohne einen Client zu starten. Am Ende sollte `lanis-mcp: (15 tools)` stehen.
 
 ### Ausgabe
 
@@ -210,7 +233,7 @@ Prüfe den Zeitraum. `start` und `end` müssen im Format `JJJJ-MM-TT` angegeben 
 
 ### Verbindungsfehler
 
-Prüfe die Zugangsdaten (beim MCP-Server die Umgebungsvariablen in der Client-Konfiguration) und ob du Zugang zum Schulportal Hessen hast (ggf. VPN oder Schulnetzwerk erforderlich).
+Prüfe die Zugangsdaten (beim MCP-Server die Umgebungsvariablen in der Client-Konfiguration bzw. die Secrets im Docker MCP Toolkit) und ob du Zugang zum Schulportal Hessen hast (ggf. VPN oder Schulnetzwerk erforderlich).
 
 ---
 
