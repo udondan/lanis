@@ -320,3 +320,16 @@ class TestTimetableParsing:
         assert mat["duration"] == 2
         assert deu["day"] == "Mittwoch"
         assert deu["duration"] == 2
+
+    def test_cells_beyond_friday_are_ignored(self):
+        """Extra cells after the five weekdays do not create entries."""
+        html = self._wrap(
+            "<tr>"
+            + self._hour_cell("1. Stunde", "07:45 - 08:30")
+            + self._empty() * 4
+            + self._lesson("MAT", "Mül")  # Freitag
+            + self._lesson("SPO", "Ber")  # no sixth day
+            + "</tr>"
+        )
+        entries = self._parse(html)
+        assert [(e["day"], e["subject"]) for e in entries] == [("Freitag", "MAT")]
