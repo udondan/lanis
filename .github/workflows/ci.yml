@@ -1,0 +1,185 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  # Uploads the coverage of main, which Codecov compares pull requests against.
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.15"
+      - run: pip install -e ".[dev]"
+      - run: ruff check src/ tests/
+
+  # All runs share one live Lanis account. Many parallel runs, for example of
+  # several Renovate PRs, would send bursts of logins that look suspicious, so
+  # only one run at a time may run the integration tests.
+  wait-for-turn:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      actions: read
+      contents: write # lock refs under refs/wait-for-turn/
+      pull-requests: read # labels for label-weights
+      statuses: write # queue position as commit status
+    # Queue order, the concurrency group that cancels outdated waiting runs and
+    # the rebase of branches that are behind main: see
+    # https://github.com/udondan/wait-for-turn#reusable-workflow
+    # The rebase needs OVERRIDE_TOKEN: pushes with github.token don't start new runs.
+    uses: udondan/wait-for-turn/.github/workflows/wait-for-turn.yml@v1
+    secrets:
+      update-token: ${{ secrets.OVERRIDE_TOKEN }}
+
+  test:
+    name: Test
+    needs: [wait-for-turn]
+    # Pull requests from forks can't take the turn and skip the wait, as they
+    # don't get the secrets. Their integration tests are skipped.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Codecov upload via OIDC
+    steps:
+      - name: Check turn
+        if: needs.wait-for-turn.result == 'failure' || needs.wait-for-turn.result == 'cancelled'
+        run: exit 1
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.15"
+      - run: pip install -e ".[dev]"
+      - run: pytest tests/ -v --cov=pylanis --cov-report=xml --cov-report=term
+        env:
+          LANIS_SCHOOL_ID: ${{ secrets.LANIS_SCHOOL_ID }}
+          LANIS_USERNAME: ${{ secrets.LANIS_USERNAME }}
+          LANIS_PASSWORD: ${{ secrets.LANIS_PASSWORD }}
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          use_oidc: true
+          fail_ci_if_error: false
+          files: coverage.xml
+
+  # Codecov reports its result as the check runs codecov/project and
+  # codecov/patch. This job waits for them, so a coverage drop fails the
+  # required job. It is skipped along with the tests and passes with a
+  # warning if Codecov doesn't report in time.
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: github.event_name == 'pull_request' && needs.test.result == 'success'
+    timeout-minutes: 10
+    permissions:
+      checks: read
+    steps:
+      - name: Wait for Codecov
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          for _ in $(seq 30); do
+            checks=$(gh api --paginate --slurp "repos/$REPO/commits/$SHA/check-runs?per_page=100" | jq -c '
+              [.[].check_runs[] | select(.app.slug == "codecov" and (.name == "codecov/project" or .name == "codecov/patch"))]
+              | group_by(.name) | map(max_by(.id))')
+            if [[ $(jq '[.[] | select(.status == "completed")] | length' <<<"$checks") == 2 ]]; then
+              jq -r '.[] | "\(.name): \(.conclusion) (\(.output.title))"' <<<"$checks"
+              failed=$(jq -r '.[] | select(.conclusion != "success" and .conclusion != "neutral") | .name' <<<"$checks")
+              if [[ -n "$failed" ]]; then
+                echo "::error::Coverage check failed: ${failed//$'\n'/, }. Details are linked in the checks of this pull request."
+                exit 1
+              fi
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::warning::Codecov didn't report within 5 minutes, coverage is not checked."
+
+  actions:
+    name: Actions
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
+        with:
+          install_args: actionlint shellcheck zizmor
+
+      # Also runs shellcheck over every `run:` block.
+      - name: actionlint
+        run: actionlint
+
+      - name: zizmor
+        run: zizmor .
+        env:
+          GH_TOKEN: ${{ github.token }} # zizmor checks the actions online
+
+  # Builds the image and runs it the way the Docker MCP Toolkit does, through
+  # a profile and the gateway. Needs no Lanis credentials: listing the tools
+  # doesn't log in.
+  docker:
+    name: Docker
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
+        with:
+          install_args: github:docker/mcp-gateway
+
+      - name: Install docker mcp plugin
+        run: |
+          mkdir -p ~/.docker/cli-plugins
+          ln -s "$(mise which docker-mcp)" ~/.docker/cli-plugins/docker-mcp
+          docker mcp version
+
+      - run: mise run docker-build
+
+      - name: Run the CLI in the image
+        run: |
+          docker run --rm udondan/lanis --version
+          docker run --rm udondan/lanis --help
+
+      - run: mise run docker-register ci
+
+      # The gateway only verifies signatures of images under mcp/, and finds
+      # the locally built image without pulling it.
+      - name: List tools through the gateway
+        run: |
+          docker mcp gateway run --profile ci --dry-run --verbose 2>&1 | tee gateway.log
+          grep -E "lanis: \([1-9][0-9]* tools\)" gateway.log
+
+  # The only test check the ruleset requires, whatever jobs are added later.
+  required:
+    needs: [lint, wait-for-turn, test, coverage, actions, docker]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check result
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

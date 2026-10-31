@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pylanis"
+version = "1.1.1"
+description = "SDK, CLI, and MCP server for Schulportal Hessen (Lanis)"
+readme = "README.md"
+license = "MIT"
+# The second file covers the vendored LanisAPI in src/pylanis/lanisapi/.
+license-files = ["LICENSE", "src/pylanis/lanisapi/LICENSE"]
+authors = [{ name = "Daniel Schroeder", email = "deemes79@googlemail.com" }]
+keywords = ["lanis", "schulportal", "hessen", "sdk", "cli", "mcp", "mcp-server", "school", "vertretungsplan"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Natural Language :: German",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Topic :: Education",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "mcp[cli]==2.3.0",
+    # Dependencies of the vendored LanisAPI (src/pylanis/lanisapi/).
+    "httpx==0.28.1",
+    "pycryptodomex==3.24.1",
+    "selectolax==1.0.2",
+]
+
+[project.urls]
+Repository = "https://github.com/udondan/lanis"
+Issues = "https://github.com/udondan/lanis/issues"
+Changelog = "https://github.com/udondan/lanis/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+dev = [
+    "anyio==4.15.1",
+    "build==1.6.1",
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.1",
+    "pytest-cov==7.1.0",
+    "ruff==0.17.2",
+]
+
+[project.scripts]
+lanis = "pylanis.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pylanis"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/", "tests/", "README.md", "LICENSE", "pyproject.toml"]
+
+[tool.hatch.envs.default]
+dependencies = []
+
+[tool.ruff.lint]
+# Keep the rule set ruff used as its default before 0.16.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
