@@ -29,24 +29,24 @@ jobs:
   # All runs share one live Lanis account. Many parallel runs, for example of
   # several Renovate PRs, would send bursts of logins that look suspicious, so
   # only one run at a time may run the integration tests.
-  wait-for-turn:
+  priority-boarding:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       actions: read
-      contents: write # lock refs under refs/wait-for-turn/
+      contents: write # lock refs under refs/priority-boarding/
       pull-requests: read # labels for label-weights
       statuses: write # queue position as commit status
     # Queue order, the concurrency group that cancels outdated waiting runs and
     # the rebase of branches that are behind main: see
-    # https://github.com/udondan/wait-for-turn#reusable-workflow
+    # https://github.com/udondan/priority-boarding#reusable-workflow
     # The rebase needs OVERRIDE_TOKEN: pushes with github.token don't start new runs.
-    uses: udondan/wait-for-turn/.github/workflows/wait-for-turn.yml@v1
+    uses: udondan/priority-boarding/.github/workflows/priority-boarding.yml@v1
     secrets:
       update-token: ${{ secrets.OVERRIDE_TOKEN }}
 
   test:
     name: Test
-    needs: [wait-for-turn]
+    needs: [priority-boarding]
     # Pull requests from forks can't take the turn and skip the wait, as they
     # don't get the secrets. Their integration tests are skipped.
     if: ${{ !cancelled() }}
@@ -56,7 +56,7 @@ jobs:
       id-token: write # Codecov upload via OIDC
     steps:
       - name: Check turn
-        if: needs.wait-for-turn.result == 'failure' || needs.wait-for-turn.result == 'cancelled'
+        if: needs.priority-boarding.result == 'failure' || needs.priority-boarding.result == 'cancelled'
         run: exit 1
 
       - uses: actions/checkout@v7
@@ -176,7 +176,7 @@ jobs:
 
   # The only test check the ruleset requires, whatever jobs are added later.
   required:
-    needs: [lint, wait-for-turn, test, coverage, actions, docker]
+    needs: [lint, priority-boarding, test, coverage, actions, docker]
     if: always()
     runs-on: ubuntu-latest
     steps:
