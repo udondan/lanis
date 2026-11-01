@@ -1,4 +1,4 @@
-FROM python:3.14-alpine AS builder
+FROM python:3.15-alpine AS builder
 
 WORKDIR /build
 COPY pyproject.toml README.md LICENSE ./
@@ -6,7 +6,7 @@ COPY src/ src/
 RUN pip install --no-cache-dir --prefix=/install .
 
 
-FROM python:3.14-alpine
+FROM python:3.15-alpine
 
 LABEL com.docker.desktop.mcp="true"
 LABEL com.docker.desktop.mcp.name="lanis"
