@@ -1,0 +1,64 @@
+[settings]
+jobs = 1
+
+[tools]
+python = "3.15.2"
+# Linters of the Actions CI job, which installs only these three.
+actionlint = "1.7.12"
+# The runner's own shellcheck is older and reports differently. actionlint runs it over every `run:` block.
+shellcheck = "0.11.0"
+zizmor = "1.31.1"
+# The `docker mcp` plugin for the Docker CI job. Docker Desktop ships its own.
+"github:docker/mcp-gateway" = "0.44.1"
+
+[tasks.setup]
+description = "Bootstrap the virtual environment"
+run = "python -m venv .venv && .venv/bin/pip install -e '.[dev]'"
+
+[tasks.server]
+description = "Run the MCP server"
+run = ".venv/bin/lanis mcp"
+
+[tasks.build]
+description = "Build the wheel"
+run = ".venv/bin/python -m build"
+
+[tasks.test]
+description = "Run tests (pass extra pytest args after --)"
+run = ".venv/bin/pytest tests/ -v {{arg(name='args', var=true, default='')}}"
+
+[tasks.lint]
+description = "Lint source with ruff"
+run = ".venv/bin/ruff check src/ tests/"
+
+[tasks.format]
+description = "Format source with ruff"
+run = ".venv/bin/ruff format src/ tests/"
+
+[tasks.docker-build]
+description = "Build the Docker image"
+run = "docker build -t udondan/lanis ."
+
+[tasks.docker-register]
+description = "Add the server to a Docker MCP Toolkit profile (created if missing)"
+usage = 'arg "[profile]" default="lanis" help="Profile ID"'
+# docker mcp only reads server files from its catalogs directory.
+run = """
+catalogs="$HOME/.docker/mcp/catalogs"
+mkdir -p "$catalogs"
+cp docker-mcp.yml "$catalogs/lanis.yml"
+server="file://$catalogs/lanis.yml"
+if docker mcp profile show "$usage_profile" >/dev/null 2>&1; then
+  docker mcp profile server add "$usage_profile" --server "$server"
+else
+  docker mcp profile create --name "$usage_profile" --id "$usage_profile" --server "$server"
+fi
+"""
+
+[tasks.docker]
+description = "Build the image and add it to a Docker MCP Toolkit profile"
+depends = ["docker-build", "docker-register"]
+
+[tasks.inspect]
+description = "Launch the MCP inspector UI"
+run = "npx @modelcontextprotocol/inspector .venv/bin/lanis mcp"
