@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.1.2](https://github.com/udondan/lanis/compare/v1.1.1...v1.1.2) (2026-11-02)
+
+
+### Dependencies
+
+* **deps:** update dependency pytest to v9.2.0 ([#64](https://github.com/udondan/lanis/issues/64)) ([24d0dfa](https://github.com/udondan/lanis/commit/24d0dfa5dee01b6b78862f6e75cdb2686d231e5f))
+* **deps:** update dependency ruff to v0.17.3 ([#62](https://github.com/udondan/lanis/issues/62)) ([6f219c8](https://github.com/udondan/lanis/commit/6f219c891faa774b70827f4dec5b83ea4393de8b))
+* **deps:** update jdx/mise-action action to v5.2.4 ([#63](https://github.com/udondan/lanis/issues/63)) ([4230e50](https://github.com/udondan/lanis/commit/4230e50100d96b899df9f0e86a639ede4b8852e6))
+* **deps:** update python docker tag to v3.15 ([#65](https://github.com/udondan/lanis/issues/65)) ([fef07fd](https://github.com/udondan/lanis/commit/fef07fd75aa40fef8ee28a293392e92462ccb813))
+
 ## [1.1.1](https://github.com/udondan/lanis/compare/v1.1.0...v1.1.1) (2026-10-29)
 
 
