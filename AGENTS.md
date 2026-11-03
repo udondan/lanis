@@ -281,7 +281,7 @@ Separate logical sections in `mcp.py` and `formatting.py` (one per tool or data 
   `udondan/lanis` (amd64 and arm64, tags `x.y.z`, `x.y`, `x`, `latest`) with an access token
   from the GitHub environment `docker-hub` (`DOCKERHUB_USERNAME` variable, `DOCKERHUB_TOKEN`
   secret).
-- CI runs the live integration tests one run at a time (`udondan/priority-boarding`),
+- CI runs the live integration tests one run at a time (`udondan/boarding-gate`),
   because all runs share one Lanis account.
 
 ## Key Architectural Notes
