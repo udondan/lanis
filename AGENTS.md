@@ -57,7 +57,7 @@ uv sync
 ```
 
 After changing dependencies in `pyproject.toml`, run `uv lock` and commit `uv.lock`.
-CI runs `uv sync --frozen`, which fails if the lock file is out of date.
+CI runs `uv sync --locked`, which fails if the lock file is out of date.
 
 Environment variables read by `Lanis.from_env()` (used by the CLI, the MCP server and the live tests):
 

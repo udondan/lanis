@@ -24,7 +24,7 @@ jobs:
         with:
           enable-cache: false
 
-      - run: uv sync --frozen
+      - run: uv sync --locked
       - run: uv run ruff check src/ tests/
       - run: uv run pytest tests/ -v
       - run: uv build --clear
