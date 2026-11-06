@@ -40,10 +40,9 @@ Repository = "https://github.com/udondan/lanis"
 Issues = "https://github.com/udondan/lanis/issues"
 Changelog = "https://github.com/udondan/lanis/blob/main/CHANGELOG.md"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "anyio==4.16.0",
-    "build==1.6.1",
     "pytest==9.2.0",
     "pytest-asyncio==1.4.1.post1",
     "pytest-cov==7.1.0",
