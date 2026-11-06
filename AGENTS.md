@@ -34,6 +34,8 @@ tests/
   test_sdk.py, test_parsers.py, test_mcp.py, test_cli.py
   test_live.py     # live tests (require credentials, skip without them)
 pyproject.toml     # single source of truth for build, deps, and tool config
+uv.lock            # locked versions with hashes, used by dev, CI and the Docker image
+.python-version    # Python version for mise, uv and CI; keep it in sync with the Dockerfile
 ```
 
 Data flow: CLI / MCP -> `Lanis` (client.py) -> lanisapi + `parsers.py` -> models ->
@@ -44,16 +46,18 @@ Data flow: CLI / MCP -> `Lanis` (client.py) -> lanisapi + `parsers.py` -> models
 With [mise](https://mise.jdx.dev) installed:
 
 ```bash
-mise install       # pin Python 3.14 for this project
-mise run setup     # create .venv and install dependencies (including dev extras)
+mise install       # Python from .python-version, and uv
+mise run setup     # uv sync: create .venv with the locked dependencies (including the dev group)
 ```
 
-Without mise:
+Without mise, with [uv](https://docs.astral.sh/uv/) installed:
 
 ```bash
-python -m venv .venv
-.venv/bin/pip install -e ".[dev]"
+uv sync
 ```
+
+After changing dependencies in `pyproject.toml`, run `uv lock` and commit `uv.lock`.
+CI runs `uv sync --locked`, which fails if the lock file is out of date.
 
 Environment variables read by `Lanis.from_env()` (used by the CLI, the MCP server and the live tests):
 
@@ -80,19 +84,21 @@ export LANIS_DATA_DIR=...
 
 ## Build & Run Commands
 
-| Task                              | mise shortcut                        | Raw command                         |
-| --------------------------------- | ------------------------------------ | ----------------------------------- |
-| Bootstrap venv                    | `mise run setup`                     | `python -m venv .venv && ...`       |
-| Run MCP server                    | `mise run server`                    | `.venv/bin/lanis mcp`               |
-| Run CLI                           |                                      | `.venv/bin/lanis --help`            |
-| Build wheel                       | `mise run build`                     | `.venv/bin/python -m build`         |
-| Lint                              | `mise run lint`                      | `.venv/bin/ruff check src/ tests/`  |
-| Format                            | `mise run format`                    | `.venv/bin/ruff format src/ tests/` |
-| Build image                       | `mise run docker-build`              | `docker build -t udondan/lanis .`   |
-| Add to Docker MCP Toolkit profile | `mise run docker-register [profile]` | see `mise.toml`                     |
+| Task                              | mise shortcut                        | Raw command                                           |
+| --------------------------------- | ------------------------------------ | ----------------------------------------------------- |
+| Bootstrap venv                    | `mise run setup`                     | `uv sync`                                             |
+| Run MCP server                    | `mise run server`                    | `uv run lanis mcp`                                    |
+| Run CLI                           |                                      | `uv run lanis --help`                                 |
+| Build wheel                       | `mise run build`                     | `uv build --clear`                                    |
+| Lint                              | `mise run lint`                      | `uv run ruff check src/ tests/`                       |
+| Format                            | `mise run format`                    | `uv run ruff format src/ tests/`                      |
+| Build image                       | `mise run docker-build`              | `uv build --clear && docker build -t udondan/lanis .` |
+| Add to Docker MCP Toolkit profile | `mise run docker-register [profile]` | see `mise.toml`                                       |
 
-`mise run docker` does both. The local `udondan/lanis:latest` takes the place of the public
-image, so the Docker MCP Toolkit runs the local build. `docker pull udondan/lanis` switches back.
+The image installs the wheel from `dist/` and the runtime dependencies from `uv.lock`, so a
+plain `docker build` needs a `uv build` first. `mise run docker` builds the image and registers
+it. The local `udondan/lanis:latest` takes the place of the public image, so the Docker MCP
+Toolkit runs the local build. `docker pull udondan/lanis` switches back.
 
 ## Test Commands
 
@@ -121,8 +127,8 @@ mise run test -- tests/test_live.py -v
 Without mise:
 
 ```bash
-.venv/bin/pytest tests/ -v
-.venv/bin/pytest tests/ --cov=pylanis --cov-report=term-missing
+uv run pytest tests/ -v
+uv run pytest tests/ --cov=pylanis --cov-report=term-missing
 ```
 
 `tests/data/mcp_golden.json` holds the output of every MCP tool for the fake portal.
@@ -140,7 +146,7 @@ No other linters or type checkers are currently configured (no mypy, pylint, bla
 
 ### Language & Version
 
-- Python ≥ 3.11 required; virtual environment uses Python 3.14
+- Python ≥ 3.11 required; development, CI and the Docker image use the version in `.python-version`
 - No TypeScript/JavaScript in the source tree
 
 ### Type Annotations
