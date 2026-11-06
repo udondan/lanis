@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.3](https://github.com/udondan/lanis/compare/v1.1.2...v1.1.3) (2026-11-06)
+
+
+### Bug Fixes
+
+* read the substitution plan of accounts without access to the whole plan ([#75](https://github.com/udondan/lanis/issues/75)) ([0d930f8](https://github.com/udondan/lanis/commit/0d930f8b94e6c09d4b0bed0ecc9457384d458542))
+
+
+### Dependencies
+
+* **deps:** update dependency anyio to v4.16.0 ([#71](https://github.com/udondan/lanis/issues/71)) ([e047adb](https://github.com/udondan/lanis/commit/e047adb6e35cc12298895b820135c1542f9ce155))
+* **deps:** update dependency pytest-asyncio to v1.4.1.post1 ([#72](https://github.com/udondan/lanis/issues/72)) ([f15a577](https://github.com/udondan/lanis/commit/f15a5776cdffbd64848d1d05f356164de02936c4))
+* **deps:** update dependency zizmor to v1.32.0 ([#74](https://github.com/udondan/lanis/issues/74)) ([87071f6](https://github.com/udondan/lanis/commit/87071f6b79dd3546d8f4b84180e518a7839d07e4))
+* **deps:** update jdx/mise-action action to v5.2.5 ([#69](https://github.com/udondan/lanis/issues/69)) ([2c1f075](https://github.com/udondan/lanis/commit/2c1f0759fdd8d2011201417cc7af4f5dc034525c))
+* **deps:** update jdx/mise-action action to v5.2.6 ([#73](https://github.com/udondan/lanis/issues/73)) ([9ef150b](https://github.com/udondan/lanis/commit/9ef150b27bb3e5094fbd79241a6af214020fd254))
+
 ## [1.1.2](https://github.com/udondan/lanis/compare/v1.1.1...v1.1.2) (2026-11-02)
 
 
