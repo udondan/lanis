@@ -13,6 +13,7 @@ from pylanis.lanisapi.substitution import (
     fetch_page,
     fetch_substitutions,
     parse_info,
+    parse_own_entries,
     parse_plan,
 )
 
@@ -45,6 +46,13 @@ def test_parse_info_without_notice():
     )
 
 
+def test_parse_info_today_without_entries():
+    assert parse_info(fixture_text("vertretungsplan_heute_leer.html")) == (
+        "15.10.2026",
+        None,
+    )
+
+
 def test_parse_info_without_date():
     with pytest.raises(CriticalElementWasNotFoundError):
         parse_info("<html><body><p>Kein Plan</p></body></html>")
@@ -71,6 +79,34 @@ def test_parse_plan():
 
 def test_parse_empty_plan():
     assert parse_plan([], "29.10.2026", None).substitutions == []
+
+
+def test_parse_own_entries():
+    entries = parse_own_entries(
+        fixture_text("vertretungsplan_eigene.html"), "15.10.2026"
+    )
+    assert entries == [
+        ENTRY,
+        {
+            "Vertreter": "",
+            "Lehrer": "BEC",
+            "Stunde": "5 - 6",
+            "Klasse": "7b",
+            "Fach": "E",
+            "Raum": "",
+            "Hinweis": "Aufgaben im Moodle",
+        },
+    ]
+
+
+def test_parse_own_entries_without_entries():
+    html = fixture_text("vertretungsplan_heute_leer.html")
+    assert parse_own_entries(html, "15.10.2026") == []
+
+
+def test_parse_own_entries_without_table():
+    with pytest.raises(CriticalElementWasNotFoundError, match="no table"):
+        parse_own_entries(fixture_text("vertretungsplan.html"), "29.10.2026")
 
 
 def test_response_without_list_means_app_not_used():

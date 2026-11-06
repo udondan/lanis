@@ -195,10 +195,11 @@ class LanisClient:
         self._require_app("Vertretungsplan")
 
         def fetch() -> SubstitutionPlan:
-            day, notice = _substitution.parse_info(
-                _substitution.fetch_page(self.session)
-            )
+            page = _substitution.fetch_page(self.session)
+            day, notice = _substitution.parse_info(page)
             raw = _substitution.fetch_substitutions(self.session, day)
+            if raw == _substitution.NO_PERMISSION_FOR_WHOLE_PLAN:
+                raw = _substitution.parse_own_entries(page, day)
             return _substitution.parse_plan(raw, day, notice)
 
         return self._call(fetch)
