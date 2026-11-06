@@ -260,6 +260,20 @@ class TestFeatures:
         assert plan.substitutions[0].class_name == "7b"
         assert form(router.calls("POST", plan_url)[0])["tag"] == "29.10.2026"
 
+    def test_substitution_plan_without_permission_for_whole_plan(
+        self, router: Router, client: LanisClient
+    ):
+        plan_url = BASE + "vertretungsplan.php"
+        page = fixture_text("vertretungsplan_eigene.html")
+        router.add("GET", plan_url, respond(text=page))
+        router.add("POST", plan_url, respond(text="-1"))
+
+        plan = client.get_substitution_plan()
+        assert plan.date == date(2026, 10, 15)
+        assert [s.hours for s in plan.substitutions] == ["3", "5 - 6"]
+        assert plan.substitutions[1].substitute == ""
+        assert plan.substitutions[1].notice == "Aufgaben im Moodle"
+
     def test_calendar(self, router: Router, client: LanisClient):
         calendar_url = BASE + "kalender.php"
         event = {
