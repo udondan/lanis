@@ -142,6 +142,10 @@ code is refactored. Only update the file when a change to MCP output is intended
 Ruff is used for linting and formatting (defaults, no custom config in pyproject.toml).
 No other linters or type checkers are currently configured (no mypy, pylint, black, etc.).
 
+CI also runs Qlty (`.qlty/qlty.toml`) for code smells: complexity, duplication, too many
+parameters. A pull request fails when it adds a smell compared to main. Check locally with
+`qlty smells --all` before pushing.
+
 ## Code Style Guidelines
 
 ### Language & Version

@@ -9,7 +9,7 @@ LANIS_* environment variables, see ``Lanis.from_env``.
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, Callable, Optional, TypeVar
 
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
@@ -22,6 +22,8 @@ from pylanis.formatting import ResponseFormat, View, truncate
 from pylanis.lanisapi import LoginPageRedirectError
 
 mcp = MCPServer("lanis_mcp")
+
+_F = TypeVar("_F", bound=Callable[..., Any])
 
 _active: Optional[Lanis] = None
 """The Lanis client the tools use. Set by run_server()."""
@@ -52,26 +54,29 @@ def _handle_error(e: Exception) -> str:
     return f"Error: {type(e).__name__}: {e}"
 
 
-def _render(view: View, response_format: ResponseFormat) -> str:
-    """Render a view and cap its length."""
-    return truncate(view.render(response_format))
+def _respond(view: Callable[[], View], response_format: ResponseFormat) -> str:
+    """Build and render a view, capped in length; errors become a message."""
+    try:
+        return truncate(view().render(response_format))
+    except Exception as e:
+        return _handle_error(e)
 
 
-# ---------------------------------------------------------------------------
-# Tool: lanis_get_schools
-# ---------------------------------------------------------------------------
+def _read_only_tool(name: str, title: str) -> Callable[[_F], _F]:
+    """Register a tool that only reads from Lanis."""
+    return mcp.tool(
+        name=name,
+        annotations=ToolAnnotations(
+            title=title,
+            readOnlyHint=True,
+            destructiveHint=False,
+            idempotentHint=True,
+            openWorldHint=True,
+        ),
+    )
 
 
-@mcp.tool(
-    name="get_schools",
-    annotations=ToolAnnotations(
-        title="Get All Lanis Schools",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+@_read_only_tool("get_schools", "Get All Lanis Schools")
 async def lanis_get_schools(
     response_format: ResponseFormat = ResponseFormat.MARKDOWN,
 ) -> str:
@@ -101,27 +106,12 @@ async def lanis_get_schools(
         - Returns "Error: ..." on API failure
         - Returns "No schools found." if the list is empty
     """
-    try:
-        return _render(formatting.schools_view(Lanis.get_schools()), response_format)
-    except Exception as e:
-        return _handle_error(e)
+    return _respond(
+        lambda: formatting.schools_view(Lanis.get_schools()), response_format
+    )
 
 
-# ---------------------------------------------------------------------------
-# Tool: lanis_get_substitution_plan
-# ---------------------------------------------------------------------------
-
-
-@mcp.tool(
-    name="get_substitution_plan",
-    annotations=ToolAnnotations(
-        title="Get Substitution Plan (Vertretungsplan)",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+@_read_only_tool("get_substitution_plan", "Get Substitution Plan (Vertretungsplan)")
 async def lanis_get_substitution_plan(
     response_format: ResponseFormat = ResponseFormat.MARKDOWN,
 ) -> str:
@@ -165,18 +155,10 @@ async def lanis_get_substitution_plan(
         - Returns "Error: Session expired..." if session needs renewal
         - Returns "No substitutions today." if there are none
     """
-    try:
-        return _render(
-            formatting.substitution_plan_view(_lanis().get_substitution_plan()),
-            response_format,
-        )
-    except Exception as e:
-        return _handle_error(e)
-
-
-# ---------------------------------------------------------------------------
-# Tool: lanis_get_calendar
-# ---------------------------------------------------------------------------
+    return _respond(
+        lambda: formatting.substitution_plan_view(_lanis().get_substitution_plan()),
+        response_format,
+    )
 
 
 class CalendarInput(BaseModel):
@@ -207,16 +189,7 @@ class CalendarInput(BaseModel):
     )
 
 
-@mcp.tool(
-    name="get_calendar",
-    annotations=ToolAnnotations(
-        title="Get Calendar Events",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+@_read_only_tool("get_calendar", "Get Calendar Events")
 async def lanis_get_calendar(params: CalendarInput) -> str:
     """Return calendar events from Lanis for a given date range.
 
@@ -260,26 +233,18 @@ async def lanis_get_calendar(params: CalendarInput) -> str:
     except ValueError as e:
         return f"Error: Invalid date format – {e}"
 
-    try:
-        events = _lanis().get_calendar(start, end, params.include_responsible)
-        view = formatting.calendar_view(
-            events, params.start, params.end, params.include_responsible
-        )
-        return _render(view, params.response_format)
-    except Exception as e:
-        return _handle_error(e)
+    return _respond(
+        lambda: formatting.calendar_view(
+            _lanis().get_calendar(start, end, params.include_responsible),
+            params.start,
+            params.end,
+            params.include_responsible,
+        ),
+        params.response_format,
+    )
 
 
-@mcp.tool(
-    name="get_calendar_of_month",
-    annotations=ToolAnnotations(
-        title="Get Current Month Calendar Events",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+@_read_only_tool("get_calendar_of_month", "Get Current Month Calendar Events")
 async def lanis_get_calendar_of_month(
     response_format: ResponseFormat = ResponseFormat.MARKDOWN,
     include_responsible: bool = False,
@@ -303,29 +268,15 @@ async def lanis_get_calendar_of_month(
         - Returns "Error: ..." on API or auth failure
         - Returns "No events this month." if calendar is empty
     """
-    try:
-        events = _lanis().get_calendar_of_month(include_responsible)
-        view = formatting.calendar_of_month_view(events, include_responsible)
-        return _render(view, response_format)
-    except Exception as e:
-        return _handle_error(e)
+    return _respond(
+        lambda: formatting.calendar_of_month_view(
+            _lanis().get_calendar_of_month(include_responsible), include_responsible
+        ),
+        response_format,
+    )
 
 
-# ---------------------------------------------------------------------------
-# Tool: lanis_get_tasks
-# ---------------------------------------------------------------------------
-
-
-@mcp.tool(
-    name="get_tasks",
-    annotations=ToolAnnotations(
-        title="Get Tasks / Homework (Mein Unterricht)",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+@_read_only_tool("get_tasks", "Get Tasks / Homework (Mein Unterricht)")
 async def lanis_get_tasks(
     response_format: ResponseFormat = ResponseFormat.MARKDOWN,
 ) -> str:
@@ -359,15 +310,9 @@ async def lanis_get_tasks(
         - Returns "Error: ..." on API or auth failure
         - Returns "No tasks found." if there are none
     """
-    try:
-        return _render(formatting.tasks_view(_lanis().get_tasks()), response_format)
-    except Exception as e:
-        return _handle_error(e)
-
-
-# ---------------------------------------------------------------------------
-# Tool: lanis_get_conversations
-# ---------------------------------------------------------------------------
+    return _respond(
+        lambda: formatting.tasks_view(_lanis().get_tasks()), response_format
+    )
 
 
 class ConversationsInput(BaseModel):
@@ -389,16 +334,7 @@ class ConversationsInput(BaseModel):
     )
 
 
-@mcp.tool(
-    name="get_conversations",
-    annotations=ToolAnnotations(
-        title="Get Conversations / Messages (Nachrichten)",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+@_read_only_tool("get_conversations", "Get Conversations / Messages (Nachrichten)")
 async def lanis_get_conversations(params: ConversationsInput) -> str:
     """Return conversations from the 'Nachrichten' section of Lanis.
 
@@ -432,30 +368,15 @@ async def lanis_get_conversations(params: ConversationsInput) -> str:
         - Returns "Error: ..." on API or auth failure
         - Returns "No conversations found." if there are none
     """
-    try:
-        return _render(
-            formatting.conversations_view(_lanis().get_conversations(params.number)),
-            params.response_format,
-        )
-    except Exception as e:
-        return _handle_error(e)
+    return _respond(
+        lambda: formatting.conversations_view(
+            _lanis().get_conversations(params.number)
+        ),
+        params.response_format,
+    )
 
 
-# ---------------------------------------------------------------------------
-# Tool: lanis_get_apps
-# ---------------------------------------------------------------------------
-
-
-@mcp.tool(
-    name="get_apps",
-    annotations=ToolAnnotations(
-        title="Get All Lanis Web Applets",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+@_read_only_tool("get_apps", "Get All Lanis Web Applets")
 async def lanis_get_apps(
     response_format: ResponseFormat = ResponseFormat.MARKDOWN,
 ) -> str:
@@ -486,27 +407,10 @@ async def lanis_get_apps(
         - Returns "Error: ..." on API or auth failure
         - Returns "No apps found." if none are available
     """
-    try:
-        return _render(formatting.apps_view(_lanis().get_apps()), response_format)
-    except Exception as e:
-        return _handle_error(e)
+    return _respond(lambda: formatting.apps_view(_lanis().get_apps()), response_format)
 
 
-# ---------------------------------------------------------------------------
-# Tool: lanis_get_available_apps
-# ---------------------------------------------------------------------------
-
-
-@mcp.tool(
-    name="get_available_apps",
-    annotations=ToolAnnotations(
-        title="Get Supported Apps Available at This School",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+@_read_only_tool("get_available_apps", "Get Supported Apps Available at This School")
 async def lanis_get_available_apps() -> str:
     """Return the list of LanisAPI-supported apps that are available at this school.
 
@@ -521,28 +425,13 @@ async def lanis_get_available_apps() -> str:
     Error Handling:
         - Returns "Error: ..." on API or auth failure
     """
-    try:
-        view = formatting.available_apps_view(_lanis().get_available_apps())
-        return view.render(ResponseFormat.MARKDOWN)
-    except Exception as e:
-        return _handle_error(e)
+    return _respond(
+        lambda: formatting.available_apps_view(_lanis().get_available_apps()),
+        ResponseFormat.MARKDOWN,
+    )
 
 
-# ---------------------------------------------------------------------------
-# Tool: lanis_get_folders
-# ---------------------------------------------------------------------------
-
-
-@mcp.tool(
-    name="get_folders",
-    annotations=ToolAnnotations(
-        title="Get Lanis Dashboard Folders",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+@_read_only_tool("get_folders", "Get Lanis Dashboard Folders")
 async def lanis_get_folders(
     response_format: ResponseFormat = ResponseFormat.MARKDOWN,
 ) -> str:
@@ -572,27 +461,12 @@ async def lanis_get_folders(
         - Returns "Error: ..." on API or auth failure
         - Returns "No folders found." if none are available
     """
-    try:
-        return _render(formatting.folders_view(_lanis().get_folders()), response_format)
-    except Exception as e:
-        return _handle_error(e)
+    return _respond(
+        lambda: formatting.folders_view(_lanis().get_folders()), response_format
+    )
 
 
-# ---------------------------------------------------------------------------
-# Tool: lanis_check_app_availability
-# ---------------------------------------------------------------------------
-
-
-@mcp.tool(
-    name="check_app_availability",
-    annotations=ToolAnnotations(
-        title="Check If a Specific App Is Available",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+@_read_only_tool("check_app_availability", "Check If a Specific App Is Available")
 async def lanis_check_app_availability(
     app_name: str,
 ) -> str:
@@ -619,29 +493,15 @@ async def lanis_check_app_availability(
         valid = ", ".join(f'"{a}"' for a in SUPPORTED_APPS)
         return f'Error: Unknown app "{app_name}". Valid options are: {valid}'
 
-    try:
-        available = _lanis().is_app_available(app_name)
-        view = formatting.app_availability_view(app_name, available)
-        return view.render(ResponseFormat.MARKDOWN)
-    except Exception as e:
-        return _handle_error(e)
+    return _respond(
+        lambda: formatting.app_availability_view(
+            app_name, _lanis().is_app_available(app_name)
+        ),
+        ResponseFormat.MARKDOWN,
+    )
 
 
-# ---------------------------------------------------------------------------
-# Tool: lanis_get_timetable
-# ---------------------------------------------------------------------------
-
-
-@mcp.tool(
-    name="get_timetable",
-    annotations=ToolAnnotations(
-        title="Get Timetable (Stundenplan)",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+@_read_only_tool("get_timetable", "Get Timetable (Stundenplan)")
 async def lanis_get_timetable(
     response_format: ResponseFormat = ResponseFormat.MARKDOWN,
 ) -> str:
@@ -676,29 +536,12 @@ async def lanis_get_timetable(
         - Returns "Error: ..." on API or auth failure
         - Returns "No timetable entries found." if the timetable is empty
     """
-    try:
-        return _render(
-            formatting.timetable_view(_lanis().get_timetable()), response_format
-        )
-    except Exception as e:
-        return _handle_error(e)
+    return _respond(
+        lambda: formatting.timetable_view(_lanis().get_timetable()), response_format
+    )
 
 
-# ---------------------------------------------------------------------------
-# Tool: lanis_get_learning_groups
-# ---------------------------------------------------------------------------
-
-
-@mcp.tool(
-    name="get_learning_groups",
-    annotations=ToolAnnotations(
-        title="Get Learning Groups (Lerngruppen)",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+@_read_only_tool("get_learning_groups", "Get Learning Groups (Lerngruppen)")
 async def lanis_get_learning_groups(
     response_format: ResponseFormat = ResponseFormat.MARKDOWN,
 ) -> str:
@@ -735,30 +578,13 @@ async def lanis_get_learning_groups(
         - Returns "Error: ..." on API or auth failure
         - Returns "No learning groups found." if there are none
     """
-    try:
-        return _render(
-            formatting.learning_groups_view(_lanis().get_learning_groups()),
-            response_format,
-        )
-    except Exception as e:
-        return _handle_error(e)
+    return _respond(
+        lambda: formatting.learning_groups_view(_lanis().get_learning_groups()),
+        response_format,
+    )
 
 
-# ---------------------------------------------------------------------------
-# Tool: lanis_get_file_storage
-# ---------------------------------------------------------------------------
-
-
-@mcp.tool(
-    name="get_file_storage",
-    annotations=ToolAnnotations(
-        title="Get File Storage (Dateispeicher)",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+@_read_only_tool("get_file_storage", "Get File Storage (Dateispeicher)")
 async def lanis_get_file_storage(
     folder_id: Optional[str] = None,
     response_format: ResponseFormat = ResponseFormat.MARKDOWN,
@@ -798,29 +624,14 @@ async def lanis_get_file_storage(
         - Returns "Error: ..." on API or auth failure
         - Returns "No items found." if the folder is empty
     """
-    try:
-        return _render(
-            formatting.file_storage_view(_lanis().get_file_storage(folder_id)),
-            response_format,
-        )
-    except Exception as e:
-        return _handle_error(e)
+    return _respond(
+        lambda: formatting.file_storage_view(_lanis().get_file_storage(folder_id)),
+        response_format,
+    )
 
 
-# ---------------------------------------------------------------------------
-# Tool: lanis_get_file_distribution
-# ---------------------------------------------------------------------------
-
-
-@mcp.tool(
-    name="get_file_distribution",
-    annotations=ToolAnnotations(
-        title="Get File Distribution / Announcements (Dateiverteilung)",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
+@_read_only_tool(
+    "get_file_distribution", "Get File Distribution / Announcements (Dateiverteilung)"
 )
 async def lanis_get_file_distribution(
     response_format: ResponseFormat = ResponseFormat.MARKDOWN,
@@ -852,30 +663,13 @@ async def lanis_get_file_distribution(
         - Returns "Error: ..." on API or auth failure
         - Returns "No distributed files available." if there are none
     """
-    try:
-        return _render(
-            formatting.file_distribution_view(_lanis().get_file_distribution()),
-            response_format,
-        )
-    except Exception as e:
-        return _handle_error(e)
+    return _respond(
+        lambda: formatting.file_distribution_view(_lanis().get_file_distribution()),
+        response_format,
+    )
 
 
-# ---------------------------------------------------------------------------
-# Tool: lanis_get_votes
-# ---------------------------------------------------------------------------
-
-
-@mcp.tool(
-    name="get_votes",
-    annotations=ToolAnnotations(
-        title="Get Active Votes / Elections (Wahlen)",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+@_read_only_tool("get_votes", "Get Active Votes / Elections (Wahlen)")
 async def lanis_get_votes(
     response_format: ResponseFormat = ResponseFormat.MARKDOWN,
 ) -> str:
@@ -905,10 +699,9 @@ async def lanis_get_votes(
         - Returns "Error: ..." on API or auth failure
         - Returns "No active votes." if there are none
     """
-    try:
-        return _render(formatting.votes_view(_lanis().get_votes()), response_format)
-    except Exception as e:
-        return _handle_error(e)
+    return _respond(
+        lambda: formatting.votes_view(_lanis().get_votes()), response_format
+    )
 
 
 # ---------------------------------------------------------------------------

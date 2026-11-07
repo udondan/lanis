@@ -254,6 +254,8 @@ VOTES_EMPTY_HTML = """
 <html><body><div class="modWahl">Es sind keine Wahlen aktiv.</div></body></html>
 """
 
+EMPTY_PAGE = "<html></html>"
+
 PAGES: dict[str, str] = {
     "stundenplan.php": TIMETABLE_HTML,
     "lerngruppen.php": LEARNING_GROUPS_HTML,
@@ -267,8 +269,8 @@ PAGES: dict[str, str] = {
 
 EMPTY_PAGES: dict[str, str] = {
     **PAGES,
-    "stundenplan.php": "<html></html>",
-    "lerngruppen.php": "<html></html>",
+    "stundenplan.php": EMPTY_PAGE,
+    "lerngruppen.php": EMPTY_PAGE,
     "dateiverteilung.php": FILE_DISTRIBUTION_EMPTY_HTML,
     "wahl.php": VOTES_EMPTY_HTML,
 }
@@ -299,7 +301,7 @@ class FakeLanisClient:
         key = url.rsplit("/", 1)[-1]
         if params and params.get("folder"):
             key = f"{key}?folder={params['folder']}"
-        return SimpleNamespace(text=self.pages.get(key, "<html></html>"))
+        return SimpleNamespace(text=self.pages.get(key, EMPTY_PAGE))
 
     def get_substitution_plan(self) -> SubstitutionPlan:
         self._record("get_substitution_plan")
