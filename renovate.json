@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["github>udondan/renovate-config"],
+  "packageRules": [
+    {
+      "description": "The Docker base image and .python-version name the same Python version.",
+      "groupName": "python",
+      "matchManagers": ["dockerfile", "pyenv"],
+      "matchDepNames": ["python"]
+    },
+    {
+      "description": "uv in mise.toml and the uv image in the Dockerfile have the same version.",
+      "groupName": "uv",
+      "matchManagers": ["mise", "dockerfile"],
+      "matchDepNames": ["uv", "ghcr.io/astral-sh/uv"]
+    }
+  ]
+}
