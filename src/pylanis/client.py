@@ -1,9 +1,10 @@
 """The Lanis class: the SDK entry point for Schulportal Hessen."""
 
+import contextlib
 import os
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Callable, Optional, TypeVar, Union
+from typing import Any, Callable, Optional, TypedDict, TypeVar, Union, Unpack
 
 from pylanis import parsers
 from pylanis.lanisapi import (
@@ -63,6 +64,58 @@ def _responsible(client: LanisClient, event: Any) -> str:
         return ""
 
 
+class LanisOptions(TypedDict, total=False):
+    """The keyword arguments of ``Lanis``."""
+
+    school_id: Optional[str]
+    """The school's ID in Lanis."""
+    school_name: Optional[str]
+    """The school's name, together with ``school_city`` instead of ``school_id``."""
+    school_city: Optional[str]
+    """The school's city, together with ``school_name``."""
+    username: Optional[str]
+    """The login name, usually ``vorname.nachname``."""
+    password: Optional[str]
+    """The password for ``username``."""
+    session_id: Optional[str]
+    """An existing session cookie, instead of username and password."""
+    data_dir: Optional[str]
+    """Directory to keep the session in, so the next process can reuse it."""
+
+
+def _auth_from(options: LanisOptions) -> Union[LanisCookie, LanisAccount]:
+    """Pick cookie or account login from the options."""
+    school_id = options.get("school_id")
+    session_id = options.get("session_id")
+    username = options.get("username")
+    password = options.get("password")
+    if school_id and session_id:
+        return LanisCookie(school_id, session_id)
+    if not (username and password):
+        raise ConfigurationError(
+            "Authentication requires either:\n"
+            "  - LANIS_SCHOOL_ID + LANIS_SESSION_ID (cookie auth)\n"
+            "  - (LANIS_SCHOOL_ID or LANIS_SCHOOL_NAME + LANIS_SCHOOL_CITY) "
+            "+ LANIS_USERNAME + LANIS_PASSWORD"
+        )
+    return LanisAccount(_school_from(options), username, password)
+
+
+def _school_from(options: LanisOptions) -> Union[str, _LanisSchool]:
+    """The school ID, or the school looked up by name and city."""
+    school_id = options.get("school_id")
+    if school_id:
+        return school_id
+    school_name = options.get("school_name")
+    school_city = options.get("school_city")
+    if school_name and school_city:
+        return _LanisSchool(school_name, school_city)
+    raise ConfigurationError(
+        "Authentication requires either LANIS_SCHOOL_ID or both "
+        "LANIS_SCHOOL_NAME and LANIS_SCHOOL_CITY"
+    )
+
+
 class Lanis:
     """Read-only access to Schulportal Hessen (Lanis).
 
@@ -79,40 +132,12 @@ class Lanis:
     next process can reuse it; otherwise it stays in memory.
     """
 
-    def __init__(
-        self,
-        *,
-        school_id: Optional[str] = None,
-        school_name: Optional[str] = None,
-        school_city: Optional[str] = None,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
-        session_id: Optional[str] = None,
-        data_dir: Optional[str] = None,
-    ) -> None:
-        if school_id and session_id:
-            self._auth: Union[LanisCookie, LanisAccount] = LanisCookie(
-                school_id, session_id
-            )
-        elif username and password:
-            if school_id:
-                school: Union[str, _LanisSchool] = school_id
-            elif school_name and school_city:
-                school = _LanisSchool(school_name, school_city)
-            else:
-                raise ConfigurationError(
-                    "Authentication requires either LANIS_SCHOOL_ID or both "
-                    "LANIS_SCHOOL_NAME and LANIS_SCHOOL_CITY"
-                )
-            self._auth = LanisAccount(school, username, password)
-        else:
-            raise ConfigurationError(
-                "Authentication requires either:\n"
-                "  - LANIS_SCHOOL_ID + LANIS_SESSION_ID (cookie auth)\n"
-                "  - (LANIS_SCHOOL_ID or LANIS_SCHOOL_NAME + LANIS_SCHOOL_CITY) "
-                "+ LANIS_USERNAME + LANIS_PASSWORD"
-            )
-        self._data_dir = data_dir
+    def __init__(self, **options: Unpack[LanisOptions]) -> None:
+        unknown = ", ".join(sorted(options.keys() - LanisOptions.__annotations__))
+        if unknown:
+            raise TypeError(f"Lanis() got unexpected keyword argument(s): {unknown}")
+        self._auth = _auth_from(options)
+        self._data_dir = options.get("data_dir")
         self._client: Optional[LanisClient] = None
 
     @classmethod
@@ -154,10 +179,8 @@ class Lanis:
     def reset(self) -> None:
         """Drop the session. The next call logs in again."""
         if self._client is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self._client.close()
-            except Exception:
-                pass
             self._client = None
 
     def _call(self, fn: Callable[[LanisClient], _T]) -> _T:

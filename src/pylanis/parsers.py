@@ -8,6 +8,7 @@ import re
 from typing import Any, Optional
 
 from selectolax.lexbor import LexborHTMLParser as _HTMLParser
+from selectolax.lexbor import LexborNode as _Node
 
 from pylanis.models import (
     DistributedFile,
@@ -37,18 +38,82 @@ def _absolute_url(url: str) -> str:
     return url
 
 
+def _text(node: Optional[_Node]) -> str:
+    """The stripped text of node, or "" if there is no node."""
+    return node.text(strip=True) if node else ""
+
+
+def _cell_text(cells: list[_Node], index: int) -> str:
+    """The text of cells[index], or "" if the row is shorter."""
+    return cells[index].text(strip=True) if len(cells) > index else ""
+
+
+def _attr(node: Optional[_Node], name: str) -> str:
+    """An attribute of node as a string, or "" if node or attribute is missing."""
+    return _to_str(node.attributes.get(name, "")) if node else ""
+
+
+def _lesson(
+    stunde: _Node, hour: str, time: str, day: str, rowspan: int
+) -> TimetableEntry:
+    """One lesson cell (div.stunde) of the timetable."""
+    subject = _text(stunde.css_first("b"))
+    teacher = _text(stunde.css_first("small"))
+    # The room is the text between subject and teacher.
+    full_text = stunde.text(strip=True)
+    room = ""
+    if subject and teacher and full_text:
+        room = full_text.replace(subject, "", 1).replace(teacher, "", 1).strip()
+    return TimetableEntry(
+        hour=hour,
+        time=time,
+        day=day,
+        subject=subject,
+        room=room,
+        teacher=teacher,
+        info=_attr(stunde, "title"),
+        duration=rowspan,
+    )
+
+
+def _row_entries(
+    row_idx: int, cells: list[_Node], occupied: set[tuple[int, int]]
+) -> list[TimetableEntry]:
+    """The lessons of one timetable row; updates occupied with its rowspans."""
+    hour = _text(cells[0].css_first("b"))
+    if not hour:
+        return []
+    time = _text(cells[0].css_first("small"))
+
+    entries: list[TimetableEntry] = []
+    # col tracks the logical column (0 = Montag, 1 = Dienstag, …).
+    col = 0
+    for cell in cells[1:]:
+        # Skip columns already occupied by a rowspan from a prior row.
+        while (row_idx, col) in occupied:
+            col += 1
+        if col >= len(DAYS):
+            break
+
+        rowspan = int(cell.attributes.get("rowspan") or 1)
+        # Mark the slots below this cell as occupied.
+        occupied.update((r, col) for r in range(row_idx + 1, row_idx + rowspan))
+
+        stunde = cell.css_first("div.stunde")
+        if stunde:
+            entries.append(_lesson(stunde, hour, time, DAYS[col], rowspan))
+        col += 1
+    return entries
+
+
 def parse_timetable(html: str) -> Timetable:
     """Parse the timetable page (stundenplan.php)."""
     tree = _HTMLParser(html)
 
-    # Extract class name from title
-    title_node = tree.css_first("title")
-    title_text = title_node.text(strip=True) if title_node else ""
+    # The class name is the part of the title before " - ".
+    title_text = _text(tree.css_first("title"))
     class_name = title_text.split(" - ")[0].strip() if " - " in title_text else ""
-
-    # Extract plan validity date
-    plan_div = tree.css_first("div.plan[data-date]")
-    valid_from = _to_str(plan_div.attributes.get("data-date", "")) if plan_div else ""
+    valid_from = _attr(tree.css_first("div.plan[data-date]"), "data-date")
 
     # The table uses rowspan to represent multi-hour lessons.  A cell with
     # rowspan=N occupies N consecutive rows in the same column, but only
@@ -57,70 +122,11 @@ def parse_timetable(html: str) -> Timetable:
     # We track occupied (row_idx, col_idx) slots so we can reconstruct the
     # correct column position for every physical cell.
     entries: list[TimetableEntry] = []
-    rows = tree.css("table.table-hoverRowspan tbody tr")
-    occupied: dict[tuple[int, int], bool] = {}
-
-    for row_idx, row in enumerate(rows):
+    occupied: set[tuple[int, int]] = set()
+    for row_idx, row in enumerate(tree.css("table.table-hoverRowspan tbody tr")):
         cells = row.css("td")
-        if not cells:
-            continue
-
-        # First cell: hour label and time
-        hour_cell = cells[0]
-        hour_name_node = hour_cell.css_first("b")
-        hour_name = hour_name_node.text(strip=True) if hour_name_node else ""
-        time_node = hour_cell.css_first("small")
-        time_text = time_node.text(strip=True) if time_node else ""
-
-        if not hour_name:
-            continue
-
-        # col tracks the logical column (0 = Montag, 1 = Dienstag, …).
-        col = 0
-        for cell in cells[1:]:
-            # Skip columns already occupied by a rowspan from a prior row.
-            while occupied.get((row_idx, col)):
-                col += 1
-
-            if col >= len(DAYS):
-                break
-
-            rowspan = int(cell.attributes.get("rowspan") or 1)
-
-            # Mark the slots below this cell as occupied.
-            for span_row in range(row_idx + 1, row_idx + rowspan):
-                occupied[(span_row, col)] = True
-
-            stunde = cell.css_first("div.stunde")
-            if stunde:
-                subject_node = stunde.css_first("b")
-                subject = subject_node.text(strip=True) if subject_node else ""
-                teacher_node = stunde.css_first("small")
-                teacher = teacher_node.text(strip=True) if teacher_node else ""
-                info = _to_str(stunde.attributes.get("title", ""))
-
-                # Extract room: text between subject and teacher
-                full_text = stunde.text(strip=True)
-                room = ""
-                if subject and teacher and full_text:
-                    room = (
-                        full_text.replace(subject, "", 1).replace(teacher, "", 1)
-                    ).strip()
-
-                entries.append(
-                    TimetableEntry(
-                        hour=hour_name,
-                        time=time_text,
-                        day=DAYS[col],
-                        subject=subject,
-                        room=room,
-                        teacher=teacher,
-                        info=info,
-                        duration=rowspan,
-                    )
-                )
-
-            col += 1
+        if cells:
+            entries += _row_entries(row_idx, cells, occupied)
 
     return Timetable(class_name=class_name, valid_from=valid_from, entries=entries)
 
@@ -145,22 +151,16 @@ def parse_learning_groups(html: str) -> list[LearningGroup]:
         # Course cell: name text + code in <small>
         # HTML: "Deutsch 05e <small>(052D05 - GYM)</small>"
         course_cell = cells[1]
-        small_node = course_cell.css_first("small")
-        course_code_raw = small_node.text(strip=True) if small_node else ""
+        course_code_raw = _text(course_cell.css_first("small"))
         # Strip surrounding parentheses from code: "(052D05 - GYM)" → "052D05 - GYM"
-        course_code = re.sub(r"^\s*\(\s*|\s*\)\s*$", "", course_code_raw).strip()
+        course_code = re.sub(r"(^\s*\(\s*)|(\s*\)\s*$)", "", course_code_raw).strip()
         # Remove the small tag text to get just the course name
-        course_name = course_cell.text(strip=True)
-        if course_code_raw:
-            course_name = course_name.replace(course_code_raw, "").strip()
+        course_name = course_cell.text(strip=True).replace(course_code_raw, "")
         # Clean up any trailing parentheses that may remain
         course_name = re.sub(r"\s*\(\s*\)\s*$", "", course_name).strip()
 
         # Teacher cell: button with title="Full Name (Abbrev)"
-        teacher_btn = cells[2].css_first("button[title]")
-        teacher = (
-            _to_str(teacher_btn.attributes.get("title", "")) if teacher_btn else ""
-        )
+        teacher = _attr(cells[2].css_first("button[title]"), "title")
 
         groups.append(
             LearningGroup(
@@ -182,16 +182,14 @@ def parse_file_storage(
     tree = _HTMLParser(html)
 
     # Current folder name from h1, without the leading icon text
-    h1 = tree.css_first("#content h1")
-    folder_name = h1.text(strip=True) if h1 else "Start"
+    folder_name = _text(tree.css_first("#content h1"))
     folder_name = re.sub(r"^\s*\S+\s*", "", folder_name).strip() or "Start"
 
     folders: list[StorageFolder] = []
     for folder_div in tree.css("div.thumbnail.folder"):
         fid = _to_str(folder_div.attributes.get("data-id", ""))
         fname = _to_str(folder_div.attributes.get("data-name", ""))
-        desc_node = folder_div.css_first("p.desc small")
-        fdesc = desc_node.text(strip=True) if desc_node else ""
+        fdesc = _text(folder_div.css_first("p.desc small"))
         if fid and fname:
             folders.append(StorageFolder(id=fid, name=fname, description=fdesc))
 
@@ -200,7 +198,7 @@ def parse_file_storage(
         fid = _to_str(file_row.attributes.get("data-id", ""))
         fname = _to_str(file_row.attributes.get("data-name", ""))
         dl_link = file_row.css_first("a[href*='download'], a[href*='dateispeicher']")
-        dl_url = _to_str(dl_link.attributes.get("href", "")) if dl_link else ""
+        dl_url = _attr(dl_link, "href")
         if fid and fname:
             files.append(
                 StorageFile(
@@ -233,11 +231,10 @@ def parse_file_distribution(html: str) -> list[DistributedFile]:
     files: list[DistributedFile] = []
     for row in tree.css("table tbody tr[data-id]"):
         cells = row.css("td")
-        fname = cells[0].text(strip=True) if cells else ""
-        fdesc = cells[1].text(strip=True) if len(cells) > 1 else ""
-        fdate = cells[2].text(strip=True) if len(cells) > 2 else ""
-        dl_link = row.css_first("a[href]")
-        dl_url = _to_str(dl_link.attributes.get("href", "")) if dl_link else ""
+        fname = _cell_text(cells, 0)
+        fdesc = _cell_text(cells, 1)
+        fdate = _cell_text(cells, 2)
+        dl_url = _attr(row.css_first("a[href]"), "href")
         if fname:
             files.append(
                 DistributedFile(
@@ -272,8 +269,8 @@ def parse_votes(html: str) -> list[Vote]:
         votes.append(
             Vote(
                 id=_to_str(item.attributes.get("data-id", "")),
-                title=title_node.text(strip=True) if title_node else "",
-                description=desc_node.text(strip=True) if desc_node else "",
+                title=_text(title_node),
+                description=_text(desc_node),
                 status="active",
             )
         )

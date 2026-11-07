@@ -55,6 +55,10 @@ class TestConstructor:
         with pytest.raises(ConfigurationError, match="Authentication requires"):
             Lanis()
 
+    def test_unknown_keyword(self):
+        with pytest.raises(TypeError, match="school"):
+            Lanis(school="1234", session_id="abc")
+
     def test_configuration_error_is_a_value_error(self):
         with pytest.raises(ValueError):
             Lanis(school_id="1234")

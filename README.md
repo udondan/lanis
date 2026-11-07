@@ -5,6 +5,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/pylanis)](https://pypi.org/project/pylanis/)
 [![CI](https://github.com/udondan/lanis/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/udondan/lanis/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/udondan/lanis/graph/badge.svg)](https://codecov.io/gh/udondan/lanis)
+[![Maintainability](https://qlty.sh/gh/udondan/projects/lanis/maintainability.svg)](https://qlty.sh/gh/udondan/projects/lanis)
 [![License](https://img.shields.io/github/license/udondan/lanis)](LICENSE)
 
 Zugriff auf das **[Schulportal Hessen (Lanis)](https://start.schulportal.hessen.de/)** aus Python, aus dem Terminal und aus KI-Assistenten: Vertretungsplan, Stundenplan, Kalender, Hausaufgaben, Nachrichten, Dateien und mehr.

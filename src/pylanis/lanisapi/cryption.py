@@ -79,7 +79,7 @@ def decrypt(encrypted: str, passphrase: str) -> str:
     aes = AES.new(key_iv[:32], AES.MODE_CBC, key_iv[32:])
     try:
         return _unpad(aes.decrypt(raw[16:])).decode()
-    except (ValueError, UnicodeDecodeError) as err:
+    except ValueError as err:
         raise CryptionError("Could not decrypt data.") from err
 
 

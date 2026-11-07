@@ -33,7 +33,7 @@ RUN apk upgrade --no-cache \
     && /usr/local/bin/python -m pip uninstall -y pip \
     && rm -rf /usr/local/lib/python3.*/ensurepip \
     && adduser -D -H -u 10001 lanis && mkdir /data && chown lanis:lanis /data
-USER lanis
+USER 10001
 
 # `docker run udondan/lanis <command>` runs the CLI; without a command the
 # image starts the MCP server, which is what the Docker MCP Toolkit expects.
