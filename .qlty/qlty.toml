@@ -62,3 +62,47 @@ mode = "block"
 [[source]]
 name = "default"
 default = true
+
+[[plugin]]
+name = "bandit"
+
+[[plugin]]
+name = "radarlint-python"
+
+[[plugin]]
+name = "hadolint"
+
+[[plugin]]
+name = "trivy"
+
+[[plugin]]
+name = "osv-scanner"
+
+[[plugin]]
+name = "gitleaks"
+
+[[plugin]]
+name = "trufflehog"
+
+# Tests use plain asserts and dummy credentials.
+[[exclude]]
+plugins = ["bandit"]
+file_patterns = ["tests/**"]
+
+# Lanis requires CryptoJS-compatible AES-CBC with a key-derived IV.
+[[triage]]
+match.rules = ["radarlint-python:python:S5542", "radarlint-python:python:S3329"]
+match.file_patterns = ["src/pylanis/lanisapi/cryption.py", "tests/**"]
+set.ignored = true
+
+# Docker MCP Toolkit requires the io.docker.server.* label keys.
+[[triage]]
+match.rules = ["hadolint:DL3048"]
+match.file_patterns = ["Dockerfile"]
+set.ignored = true
+
+# The MCP server talks over stdio; there is nothing to health-check.
+[[triage]]
+match.rules = ["trivy:DS-0026"]
+match.file_patterns = ["Dockerfile"]
+set.ignored = true
