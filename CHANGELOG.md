@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/udondan/lanis/compare/v1.1.3...v1.1.4) (2026-11-07)
+
+
+### Dependencies
+
+* **deps:** update sigstore/cosign-installer action to v4.1.3 ([#78](https://github.com/udondan/lanis/issues/78)) ([3236fb6](https://github.com/udondan/lanis/commit/3236fb6a3a04296d754b1a343aade1593225e477))
+
 ## [1.1.3](https://github.com/udondan/lanis/compare/v1.1.2...v1.1.3) (2026-11-06)
 
 
