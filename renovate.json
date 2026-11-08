@@ -13,6 +13,22 @@
       "groupName": "uv",
       "matchManagers": ["mise", "dockerfile"],
       "matchDepNames": ["uv", "ghcr.io/astral-sh/uv"]
+    },
+    {
+      "description": "The final stage base image ships in the Docker image.",
+      "matchManagers": ["dockerfile"],
+      "matchDepTypes": ["final"],
+      "semanticCommitType": "build"
+    },
+    {
+      "description": "Indirect dependencies in uv.lock ship in the Docker image.",
+      "matchManagers": ["pep621"],
+      "matchDepTypes": ["uv.lock"],
+      "semanticCommitType": "build"
     }
-  ]
+  ],
+  "lockFileMaintenance": {
+    "description": "The Docker image installs the locked dependencies, so lock file maintenance ships to users.",
+    "semanticCommitType": "build"
+  }
 }
