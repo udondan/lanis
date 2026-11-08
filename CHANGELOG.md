@@ -7,23 +7,11 @@
 
 * read the substitution plan of accounts without access to the whole plan ([#75](https://github.com/udondan/lanis/issues/75)) ([0d930f8](https://github.com/udondan/lanis/commit/0d930f8b94e6c09d4b0bed0ecc9457384d458542))
 
-
-### Dependencies
-
-* **deps:** update dependency anyio to v4.16.0 ([#71](https://github.com/udondan/lanis/issues/71)) ([e047adb](https://github.com/udondan/lanis/commit/e047adb6e35cc12298895b820135c1542f9ce155))
-* **deps:** update dependency pytest-asyncio to v1.4.1.post1 ([#72](https://github.com/udondan/lanis/issues/72)) ([f15a577](https://github.com/udondan/lanis/commit/f15a5776cdffbd64848d1d05f356164de02936c4))
-* **deps:** update dependency zizmor to v1.32.0 ([#74](https://github.com/udondan/lanis/issues/74)) ([87071f6](https://github.com/udondan/lanis/commit/87071f6b79dd3546d8f4b84180e518a7839d07e4))
-* **deps:** update jdx/mise-action action to v5.2.5 ([#69](https://github.com/udondan/lanis/issues/69)) ([2c1f075](https://github.com/udondan/lanis/commit/2c1f0759fdd8d2011201417cc7af4f5dc034525c))
-* **deps:** update jdx/mise-action action to v5.2.6 ([#73](https://github.com/udondan/lanis/issues/73)) ([9ef150b](https://github.com/udondan/lanis/commit/9ef150b27bb3e5094fbd79241a6af214020fd254))
-
 ## [1.1.2](https://github.com/udondan/lanis/compare/v1.1.1...v1.1.2) (2026-11-02)
 
 
 ### Dependencies
 
-* **deps:** update dependency pytest to v9.2.0 ([#64](https://github.com/udondan/lanis/issues/64)) ([24d0dfa](https://github.com/udondan/lanis/commit/24d0dfa5dee01b6b78862f6e75cdb2686d231e5f))
-* **deps:** update dependency ruff to v0.17.3 ([#62](https://github.com/udondan/lanis/issues/62)) ([6f219c8](https://github.com/udondan/lanis/commit/6f219c891faa774b70827f4dec5b83ea4393de8b))
-* **deps:** update jdx/mise-action action to v5.2.4 ([#63](https://github.com/udondan/lanis/issues/63)) ([4230e50](https://github.com/udondan/lanis/commit/4230e50100d96b899df9f0e86a639ede4b8852e6))
 * **deps:** update python docker tag to v3.15 ([#65](https://github.com/udondan/lanis/issues/65)) ([fef07fd](https://github.com/udondan/lanis/commit/fef07fd75aa40fef8ee28a293392e92462ccb813))
 
 ## [1.1.1](https://github.com/udondan/lanis/compare/v1.1.0...v1.1.1) (2026-10-29)
@@ -39,11 +27,6 @@
 ### Features
 
 * publish the Docker image udondan/lanis to Docker Hub ([#50](https://github.com/udondan/pylanis/issues/50)) ([49612f2](https://github.com/udondan/pylanis/commit/49612f2861e0f1d0ebb313d8ce57c6afad8a9267))
-
-
-### Dependencies
-
-* **deps:** update docker/login-action action to v4.7.0 ([#52](https://github.com/udondan/pylanis/issues/52)) ([0cc12f7](https://github.com/udondan/pylanis/commit/0cc12f70b1e50fea40a2bc586f1fa0353655ff82))
 
 ## [1.0.0](https://github.com/udondan/pylanis/compare/v0.2.1...v1.0.0) (2026-10-29)
 
@@ -65,11 +48,6 @@
 * log in again when the Lanis session ends ([#43](https://github.com/udondan/pylanis/issues/43)) ([928c70f](https://github.com/udondan/pylanis/commit/928c70f7c31259ed882b658854f68d8a006381ed))
 * never reuse the stored session of another account ([928c70f](https://github.com/udondan/pylanis/commit/928c70f7c31259ed882b658854f68d8a006381ed))
 * return all conversations when there are fewer than requested ([928c70f](https://github.com/udondan/pylanis/commit/928c70f7c31259ed882b658854f68d8a006381ed))
-
-
-### Dependencies
-
-* **deps:** update dependency python to v3.15.0 ([#27](https://github.com/udondan/pylanis/issues/27)) ([6a4829c](https://github.com/udondan/pylanis/commit/6a4829c14d2c9d8db50ad9c74f9ccde949d5ccd1))
 
 ## [0.2.0](https://github.com/udondan/pylanis/compare/v0.1.0...v0.2.0) (2026-10-29)
 
@@ -107,17 +85,5 @@
 
 ### Dependencies
 
-* **deps:** update actions/checkout action to v6 ([43dad50](https://github.com/udondan/pylanis/commit/43dad5048c4b19d906c7f7710a46a847fd0322b2))
-* **deps:** update actions/checkout action to v6 ([3ead9d9](https://github.com/udondan/pylanis/commit/3ead9d9f85f5918769e683aa66da5da959781608))
-* **deps:** update actions/checkout action to v7 ([#18](https://github.com/udondan/pylanis/issues/18)) ([e7099e2](https://github.com/udondan/pylanis/commit/e7099e2dae4e070a47e7e4d9224f440655fc9807))
-* **deps:** update actions/setup-python action to v6 ([0d07e67](https://github.com/udondan/pylanis/commit/0d07e67b2a9966d35a548b48468d8f179ecb090a))
-* **deps:** update actions/setup-python action to v6 ([fe4e9de](https://github.com/udondan/pylanis/commit/fe4e9defd3394e2f159b3949bb3944cf6ba62fe0))
-* **deps:** update actions/setup-python action to v7 ([#19](https://github.com/udondan/pylanis/issues/19)) ([bda7ce1](https://github.com/udondan/pylanis/commit/bda7ce1692e710227c49231f04b3acf3a95d09c1))
 * **deps:** update dependency mcp to v2 ([#20](https://github.com/udondan/pylanis/issues/20)) ([4499935](https://github.com/udondan/pylanis/commit/4499935652e8e8fec04ae1b4e86be5eac0369c65))
 * **deps:** update dependency mcp to v2.3.0 ([#26](https://github.com/udondan/pylanis/issues/26)) ([fe38161](https://github.com/udondan/pylanis/commit/fe3816132e7fc76bffad8c74914731d54bc16da7))
-* **deps:** update dependency pytest-asyncio to v1.4.1 ([#37](https://github.com/udondan/pylanis/issues/37)) ([3a8c93b](https://github.com/udondan/pylanis/commit/3a8c93b5974485d9e20346e582c2c21b69a89eab))
-* **deps:** update dependency ruff to v0.17.0 ([#28](https://github.com/udondan/pylanis/issues/28)) ([c0c1fa0](https://github.com/udondan/pylanis/commit/c0c1fa00646afe7889f673d42d0b47e38166f166))
-* **deps:** update dependency ruff to v0.17.1 ([#30](https://github.com/udondan/pylanis/issues/30)) ([d563a82](https://github.com/udondan/pylanis/commit/d563a823b3efdaaaf9562f0692ade099b87e26d5))
-* **deps:** update dependency ruff to v0.17.2 ([#31](https://github.com/udondan/pylanis/issues/31)) ([f22c4d6](https://github.com/udondan/pylanis/commit/f22c4d6c9ae53a14390c8b9be00f3ce5023bded9))
-* **deps:** update jdx/mise-action action to v5 ([#34](https://github.com/udondan/pylanis/issues/34)) ([730c677](https://github.com/udondan/pylanis/commit/730c6779b8a8295ad97012992d97cc45513641e8))
-* **deps:** update pypa/gh-action-pypi-publish action to v1.14.3 ([#41](https://github.com/udondan/pylanis/issues/41)) ([bbb0c61](https://github.com/udondan/pylanis/commit/bbb0c61d959abc01b7342d6f639adae7eeb16f21))
