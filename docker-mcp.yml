@@ -3,8 +3,8 @@
 name: lanis
 type: server
 image: udondan/lanis:latest
-title: Lanis (Schulportal Hessen)
-description: Vertretungsplan, Stundenplan, Kalender, Aufgaben, Nachrichten und Dateien aus dem Schulportal Hessen (Lanis)
+title: Lanis (Schulportal Hessen, inoffiziell)
+description: Inoffizieller Zugriff auf Vertretungsplan, Stundenplan, Kalender, Aufgaben, Nachrichten und Dateien aus dem Schulportal Hessen (Lanis)
 secrets:
   - name: lanis.school_id
     env: LANIS_SCHOOL_ID
