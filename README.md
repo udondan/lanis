@@ -8,6 +8,9 @@
 [![Maintainability](https://qlty.sh/gh/udondan/projects/lanis/maintainability.svg)](https://qlty.sh/gh/udondan/projects/lanis)
 [![License](https://img.shields.io/github/license/udondan/lanis)](LICENSE)
 
+> [!NOTE]
+> Inoffizielles Community-Projekt. Nicht mit dem Land Hessen oder dem Schulportal Hessen verbunden, nicht von ihnen unterstützt oder autorisiert.
+
 Zugriff auf das **[Schulportal Hessen (Lanis)](https://start.schulportal.hessen.de/)** aus Python, aus dem Terminal und aus KI-Assistenten: Vertretungsplan, Stundenplan, Kalender, Hausaufgaben, Nachrichten, Dateien und mehr.
 
 lanis bietet drei gleichwertige Zugänge zu denselben Daten:
@@ -318,3 +321,9 @@ Prüfe die Zugangsdaten (beim MCP-Server die Umgebungsvariablen in der Client-Ko
 lanis steht unter der [MIT-Lizenz](LICENSE).
 
 Der Ordner [`src/pylanis/lanisapi/`](src/pylanis/lanisapi/) basiert auf [LanisAPI](https://github.com/lanis-mobile/LanisAPI) 0.4.1 von Dacjan Gapinski. Das Projekt wird nicht mehr weiterentwickelt; der Code wurde überarbeitet und wird hier gepflegt. LanisAPI steht ebenfalls unter der MIT-Lizenz, siehe [`src/pylanis/lanisapi/LICENSE`](src/pylanis/lanisapi/LICENSE).
+
+---
+
+## Disclaimer
+
+Dieses Projekt ist ein inoffizielles, unabhängiges Open-Source-Projekt und steht in keiner Verbindung zum Land Hessen oder zum Hessischen Ministerium für Kultus, Bildung und Chancen. Schulportal Hessen und LANIS sind Angebote des Landes Hessen. Die Namen werden ausschließlich zur Beschreibung der Kompatibilität verwendet. Die Nutzung erfolgt auf eigenes Risiko und unter Beachtung der Nutzungsbedingungen des Schulportals Hessen.
