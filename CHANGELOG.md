@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/udondan/lanis/compare/v1.1.3...v1.1.4) (2026-11-09)
+
+
+### Dependencies
+
+* **deps:** update dependency pycryptodomex to v3.24.2 ([#84](https://github.com/udondan/lanis/issues/84)) ([f26bbf0](https://github.com/udondan/lanis/commit/f26bbf033a33a6c639e880930e7c7db5304889b6))
+
 ## [1.1.3](https://github.com/udondan/lanis/compare/v1.1.2...v1.1.3) (2026-11-06)
 
 
