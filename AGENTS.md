@@ -294,7 +294,13 @@ Separate logical sections in `mcp.py` and `formatting.py` (one per tool or data 
   from the GitHub environment `docker-hub` (`DOCKERHUB_USERNAME` variable, `DOCKERHUB_TOKEN`
   secret).
 - CI runs the live integration tests one run at a time (`udondan/boarding-gate`),
-  because all runs share one Lanis account.
+  because all runs share one Lanis account. Every job of `ci.yml` waits for the gate and fails
+  if it failed: while another run holds the turn, this branch likely needs a rebase anyway.
+  On pull requests, the `changes` job (`dorny/paths-filter`) decides whether lint, the tests
+  and the Docker job run; the tests and the Docker job also need lint to pass. When the code,
+  the tests or the image start depending on another file, add it to that filter, or the tests
+  silently skip. The workflows install uv with `jdx/mise-action`, so its version is only in
+  `mise.toml`.
 
 ## Key Architectural Notes
 
