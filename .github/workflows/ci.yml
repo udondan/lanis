@@ -82,7 +82,7 @@ jobs:
         with:
           persist-credentials: false
       # uv from mise.toml. uv installs the Python version from .python-version.
-      - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
+      - uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
         with:
           install_args: uv
       - run: uv sync --locked
@@ -110,7 +110,7 @@ jobs:
         with:
           persist-credentials: false
       # uv from mise.toml. uv installs the Python version from .python-version.
-      - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
+      - uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
         with:
           install_args: uv
       - run: uv sync --locked
@@ -177,7 +177,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
+      - uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
         with:
           install_args: actionlint shellcheck zizmor
 
@@ -252,7 +252,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
+      - uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
         with:
           install_args: github:docker/mcp-gateway uv
 
