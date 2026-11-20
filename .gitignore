@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.ruff_cache/
+dist/
+*.egg-info/
+.eggs/
+.coverage
+coverage.xml
+htmlcov/
+.vibe

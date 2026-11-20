@@ -1,0 +1,11 @@
+.git/
+.github/
+.venv/
+.vibe/
+.opencode/
+.pytest_cache/
+.ruff_cache/
+tests/
+# The image installs only the wheel.
+dist/*.tar.gz
+*.egg-info/
