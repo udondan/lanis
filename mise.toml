@@ -4,7 +4,7 @@ jobs = 1
 idiomatic_version_file_enable_tools = ["python"]
 
 [tools]
-uv = "0.13.8"
+uv = "0.13.9"
 # Linters of the Actions CI job, which installs only these three.
 actionlint = "1.7.12"
 # The runner's own shellcheck is older and reports differently. actionlint runs it over every `run:` block.
