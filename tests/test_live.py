@@ -22,7 +22,7 @@ import pytest
 from pylanis import Lanis
 from pylanis import mcp as srv
 from pylanis.formatting import ResponseFormat
-from pylanis.lanisapi import AppNotAvailableError
+from pylanis.lanisapi import AppNotAvailableError, NoSubstitutionPlanError
 from pylanis.lanisapi.cryption import Cryptor
 
 _CREDENTIALS = ("LANIS_SCHOOL_ID", "LANIS_USERNAME", "LANIS_PASSWORD")
@@ -86,6 +86,8 @@ def test_substitution_plan(lanis):
         plan = lanis.get_substitution_plan()
     except AppNotAvailableError:
         pytest.skip("Vertretungsplan is not used at this school")
+    except NoSubstitutionPlanError:
+        pytest.skip("No substitution plan published yet")
     print(f"\n  Date: {plan.date}, substitutions: {len(plan.substitutions)}")
     _assert_ok(run(srv.lanis_get_substitution_plan(ResponseFormat.MARKDOWN)))
 

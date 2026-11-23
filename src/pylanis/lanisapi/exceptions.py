@@ -33,6 +33,10 @@ class AppNotAvailableError(LanisError):
     """The school does not offer the requested Lanis app."""
 
 
+class NoSubstitutionPlanError(LanisError):
+    """Lanis has not published a substitution plan yet, e.g. early in the morning."""
+
+
 class CriticalElementWasNotFoundError(LanisError):
     """An HTML element the parser depends on is missing."""
 

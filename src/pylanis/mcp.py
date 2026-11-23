@@ -19,7 +19,7 @@ from pylanis import formatting
 from pylanis.client import SUPPORTED_APPS, Lanis
 from pylanis.errors import SessionExpiredError
 from pylanis.formatting import ResponseFormat, View, truncate
-from pylanis.lanisapi import LoginPageRedirectError
+from pylanis.lanisapi import LoginPageRedirectError, NoSubstitutionPlanError
 
 mcp = MCPServer("lanis_mcp")
 
@@ -51,6 +51,8 @@ def _handle_error(e: Exception) -> str:
             "Error: Session expired. The client has been reset. "
             "Please retry the request."
         )
+    if isinstance(e, NoSubstitutionPlanError):
+        return "No substitution plan published yet."
     return f"Error: {type(e).__name__}: {e}"
 
 
@@ -154,6 +156,7 @@ async def lanis_get_substitution_plan(
     Error Handling:
         - Returns "Error: Session expired..." if session needs renewal
         - Returns "No substitutions today." if there are none
+        - Returns "No substitution plan published yet." before Lanis publishes one
     """
     return _respond(
         lambda: formatting.substitution_plan_view(_lanis().get_substitution_plan()),
