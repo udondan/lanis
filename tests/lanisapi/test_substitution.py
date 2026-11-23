@@ -7,6 +7,7 @@ import pytest
 from pylanis.lanisapi.exceptions import (
     AppNotAvailableError,
     CriticalElementWasNotFoundError,
+    NoSubstitutionPlanError,
 )
 from pylanis.lanisapi.session import LanisSession
 from pylanis.lanisapi.substitution import (
@@ -56,6 +57,11 @@ def test_parse_info_today_without_entries():
 def test_parse_info_without_date():
     with pytest.raises(CriticalElementWasNotFoundError):
         parse_info("<html><body><p>Kein Plan</p></body></html>")
+
+
+def test_parse_info_before_plan_is_published():
+    with pytest.raises(NoSubstitutionPlanError):
+        parse_info(fixture_text("vertretungsplan_ohne_plan.html"))
 
 
 def test_parse_plan():

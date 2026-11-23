@@ -14,12 +14,17 @@ from typing import Any, Optional
 from selectolax.lexbor import LexborHTMLParser
 
 from . import _urls
-from .exceptions import AppNotAvailableError, CriticalElementWasNotFoundError
+from .exceptions import (
+    AppNotAvailableError,
+    CriticalElementWasNotFoundError,
+    NoSubstitutionPlanError,
+)
 from .models import Substitution, SubstitutionPlan
 from .session import LanisSession
 
 _DATE = re.compile(r"(\d\d\.\d\d\.\d\d\d\d)")
 _NOTICE_SELECTOR = ".infos > tbody:nth-child(1) > tr:nth-child(2) > td:nth-child(1)"
+_PLAN_SCRIPT = "module/vertretungsplan/js/my.js"
 _FIELDS = ("Vertreter", "Lehrer", "Stunde", "Klasse", "Fach", "Raum", "Hinweis")
 
 NO_PERMISSION_FOR_WHOLE_PLAN = -1
@@ -31,7 +36,11 @@ def fetch_page(session: LanisSession) -> str:
 
 
 def parse_info(html: str) -> tuple[str, Optional[str]]:
-    """Return the date (``dd.mm.yyyy``) and the optional notice of the plan page."""
+    """Return the date (``dd.mm.yyyy``) and the optional notice of the plan page.
+
+    Before a plan is published (e.g. early in the morning), the page has the
+    plan script but no day panel.
+    """
     tree = LexborHTMLParser(html)
 
     notice_node = tree.css_first(_NOTICE_SELECTOR)
@@ -40,6 +49,10 @@ def parse_info(html: str) -> tuple[str, Optional[str]]:
     date_node = tree.css_first("div.panel div.panel-body h3")
     match = _DATE.search(date_node.text()) if date_node is not None else None
     if match is None:
+        if _PLAN_SCRIPT in html:
+            raise NoSubstitutionPlanError(
+                "Lanis has not published a substitution plan yet."
+            )
         raise CriticalElementWasNotFoundError(
             "The substitution plan page has no date. Lanis probably changed the page."
         )

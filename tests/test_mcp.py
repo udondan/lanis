@@ -18,7 +18,7 @@ from conftest import make_lanis
 from pylanis import formatting
 from pylanis import mcp as srv
 from pylanis.formatting import CHARACTER_LIMIT, ResponseFormat
-from pylanis.lanisapi import LoginPageRedirectError
+from pylanis.lanisapi import LoginPageRedirectError, NoSubstitutionPlanError
 
 GOLDEN = json.loads((Path(__file__).parent / "data" / "mcp_golden.json").read_text())
 
@@ -195,6 +195,11 @@ class TestErrors:
             patch.object(srv.Lanis, "get_schools", side_effect=RuntimeError("down")),
         ):
             assert run(call()) == "Error: RuntimeError: down"
+
+    def test_substitution_plan_not_published(self):
+        with patch.object(srv, "_lanis", side_effect=NoSubstitutionPlanError("x")):
+            result = run(srv.lanis_get_substitution_plan(ResponseFormat.MARKDOWN))
+        assert result == "No substitution plan published yet."
 
     def test_missing_credentials(self, active, monkeypatch):
         for name in ("LANIS_SCHOOL_ID", "LANIS_SESSION_ID", "LANIS_USERNAME"):
