@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.5](https://github.com/udondan/lanis/compare/v1.1.4...v1.1.5) (2026-11-23)
+
+
+### Bug Fixes
+
+* report unpublished substitution plan instead of page-change error ([#105](https://github.com/udondan/lanis/issues/105)) ([0737029](https://github.com/udondan/lanis/commit/0737029dbb2aaf023ff82b0725bfcdac6c5c5b85))
+
 ## [1.1.4](https://github.com/udondan/lanis/compare/v1.1.3...v1.1.4) (2026-11-09)
 
 
