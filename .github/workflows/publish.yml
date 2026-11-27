@@ -147,6 +147,29 @@ jobs:
             fi
           done
 
+      # PyPI can take minutes to serve a new release, and the registry rejects
+      # a version it cannot find. Polls every 30 s, for at most 15 minutes.
+      - name: Wait for the release on PyPI
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          package="$(jq -r '.packages[0].identifier' server.json)"
+          marker="mcp-name: $(jq -r .name server.json)"
+          url="https://pypi.org/pypi/${package}/${version}/json"
+          for attempt in $(seq 30); do
+            if curl --fail --location --silent --show-error "$url" \
+              | jq --exit-status --arg marker "$marker" '.info.description // "" | contains($marker)' > /dev/null; then
+              echo "PyPI serves $package $version"
+              exit 0
+            fi
+            echo "Attempt $attempt: $package $version is not on PyPI yet"
+            if [[ "$attempt" -lt 30 ]]; then sleep 30; fi
+          done
+          echo "::error::PyPI does not serve $package $version with \"$marker\" in its description after 15 minutes"
+          exit 1
+
       - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
 
       - name: Download and verify mcp-publisher
