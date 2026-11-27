@@ -190,6 +190,10 @@ lanis --format markdown tasks
 - „Zeig mir alle Termine im April."
 - „Habe ich ungelesene Nachrichten?"
 
+Der Server ist in der [MCP Registry](https://registry.modelcontextprotocol.io/) als `io.github.udondan/lanis` eingetragen. Clients, die die Registry nutzen, starten ihn mit `uvx pylanis mcp`.
+
+<!-- mcp-name: io.github.udondan/lanis -->
+
 ### Claude Desktop
 
 Öffne die Konfigurationsdatei von Claude Desktop:

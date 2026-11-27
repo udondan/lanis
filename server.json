@@ -1,0 +1,72 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.udondan/lanis",
+  "title": "Lanis (Schulportal Hessen)",
+  "description": "Unofficial read-only access to Schulportal Hessen: substitutions, timetable, calendar, messages",
+  "version": "1.1.5",
+  "repository": {
+    "url": "https://github.com/udondan/lanis",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "pylanis",
+      "version": "1.1.5",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "LANIS_SCHOOL_ID",
+          "description": "School ID. Either this or LANIS_SCHOOL_NAME and LANIS_SCHOOL_CITY.",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "LANIS_SCHOOL_NAME",
+          "description": "School name, together with LANIS_SCHOOL_CITY, instead of LANIS_SCHOOL_ID.",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "LANIS_SCHOOL_CITY",
+          "description": "City of the school, together with LANIS_SCHOOL_NAME.",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "LANIS_USERNAME",
+          "description": "Lanis username. Needed unless LANIS_SESSION_ID is set.",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "LANIS_PASSWORD",
+          "description": "Lanis password. Needed unless LANIS_SESSION_ID is set.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "LANIS_SESSION_ID",
+          "description": "Session cookie instead of username and password, with LANIS_SCHOOL_ID.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "LANIS_DATA_DIR",
+          "description": "Directory that keeps the session in session.json, so a restart needs no new login.",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}
