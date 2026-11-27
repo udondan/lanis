@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/udondan/lanis/compare/v1.1.5...v1.2.0) (2026-11-27)
+
+
+### Features
+
+* publish the MCP server to the MCP Registry ([#111](https://github.com/udondan/lanis/issues/111)) ([110da92](https://github.com/udondan/lanis/commit/110da92e826e977862ee17eb273012ca7f9743af))
+
 ## [1.1.5](https://github.com/udondan/lanis/compare/v1.1.4...v1.1.5) (2026-11-23)
 
 
