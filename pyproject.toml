@@ -51,6 +51,9 @@ dev = [
 
 [project.scripts]
 lanis = "pylanis.cli:main"
+# Same command under the package name: MCP clients that install from the MCP
+# Registry run `uvx pylanis mcp`.
+pylanis = "pylanis.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pylanis"]
