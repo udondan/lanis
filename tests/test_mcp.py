@@ -72,21 +72,15 @@ def _all_tool_outputs(tag: str) -> dict[str, str]:
         out[f"{k}/schools"] = run(srv.lanis_get_schools(fmt))
         out[f"{k}/subst"] = run(srv.lanis_get_substitution_plan(fmt))
         for resp in (False, True):
-            params = srv.CalendarInput(
-                start="2026-11-01",
-                end="2026-11-30",
-                response_format=fmt,
-                include_responsible=resp,
+            out[f"{k}/cal/{resp}"] = run(
+                srv.lanis_get_calendar("2026-11-01", "2026-11-30", fmt, resp)
             )
-            out[f"{k}/cal/{resp}"] = run(srv.lanis_get_calendar(params))
             out[f"{k}/calmonth/{resp}"] = run(
                 srv.lanis_get_calendar_of_month(fmt, resp)
             )
         out[f"{k}/tasks"] = run(srv.lanis_get_tasks(fmt))
         out[f"{k}/conv"] = run(
-            srv.lanis_get_conversations(
-                srv.ConversationsInput(number=5, response_format=fmt)
-            )
+            srv.lanis_get_conversations(number=5, response_format=fmt)
         )
         out[f"{k}/apps"] = run(srv.lanis_get_apps(fmt))
         out[f"{k}/folders"] = run(srv.lanis_get_folders(fmt))
@@ -116,13 +110,15 @@ def test_output_matches_golden(empty, portal, active):
 
 def test_invalid_calendar_date(active):
     active(make_lanis())
-    params = srv.CalendarInput(start="2026-13-01", end="2026-11-30")
-    assert run(srv.lanis_get_calendar(params)) == GOLDEN["calendar/bad-date"]
+    result = run(srv.lanis_get_calendar("2026-13-01", "2026-11-30"))
+    assert result == GOLDEN["calendar/bad-date"]
 
 
-def test_calendar_input_rejects_bad_pattern():
-    with pytest.raises(Exception):
-        srv.CalendarInput(start="not-a-date", end="2026-12-31")
+def test_calendar_rejects_bad_pattern():
+    """The schema refuses dates in another format before the tool runs."""
+    args = {"start": "not-a-date", "end": "2026-12-31"}
+    with pytest.raises(Exception, match="pattern"):
+        run(srv.mcp.call_tool("get_calendar", args))
 
 
 class TestErrors:
@@ -157,9 +153,7 @@ class TestErrors:
             lambda: srv.lanis_get_available_apps(),
             lambda: srv.lanis_check_app_availability("Kalender"),
             lambda: srv.lanis_get_calendar_of_month(ResponseFormat.MARKDOWN),
-            lambda: srv.lanis_get_calendar(
-                srv.CalendarInput(start="2026-11-01", end="2026-11-30")
-            ),
+            lambda: srv.lanis_get_calendar("2026-11-01", "2026-11-30"),
         ],
     )
     def test_errors_of_special_tools(self, active, call):
@@ -180,7 +174,7 @@ class TestErrors:
             lambda: srv.lanis_get_schools(ResponseFormat.MARKDOWN),
             lambda: srv.lanis_get_substitution_plan(ResponseFormat.MARKDOWN),
             lambda: srv.lanis_get_tasks(ResponseFormat.MARKDOWN),
-            lambda: srv.lanis_get_conversations(srv.ConversationsInput()),
+            lambda: srv.lanis_get_conversations(),
             lambda: srv.lanis_get_apps(ResponseFormat.MARKDOWN),
             lambda: srv.lanis_get_timetable(ResponseFormat.MARKDOWN),
             lambda: srv.lanis_get_learning_groups(ResponseFormat.MARKDOWN),
@@ -249,9 +243,7 @@ class TestServer:
         conversations = lanis.get_conversations() * 200
         with patch.object(lanis, "get_conversations", return_value=conversations):
             result = run(
-                srv.lanis_get_conversations(
-                    srv.ConversationsInput(response_format=ResponseFormat.JSON)
-                )
+                srv.lanis_get_conversations(response_format=ResponseFormat.JSON)
             )
         assert len(result) > CHARACTER_LIMIT
         assert result.endswith("[Response truncated. Use filters to narrow results.]")
@@ -268,3 +260,14 @@ class TestToolNames:
 
     def test_no_lanis_prefix(self):
         assert not [n for n in self._names() if n.startswith("lanis_")]
+
+
+def test_every_parameter_has_a_description():
+    """The schema describes each parameter, so clients know what to pass."""
+    missing = [
+        f"{t.name}.{name}"
+        for t in run(srv.mcp.list_tools())
+        for name, prop in t.input_schema.get("properties", {}).items()
+        if not prop.get("description")
+    ]
+    assert missing == []

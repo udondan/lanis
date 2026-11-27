@@ -6,14 +6,18 @@ German school portal Schulportal Hessen. The tools only format what the
 
 Start it with ``lanis mcp``. Credentials come from the
 LANIS_* environment variables, see ``Lanis.from_env``.
+
+The docstrings are the tool descriptions the clients see. Each says what the
+tool returns, when to use it rather than a sibling, and how it fails. The
+parameters are described in their ``Field``, which ends up in the schema.
 """
 
 from datetime import datetime
-from typing import Any, Callable, Optional, TypeVar
+from typing import Annotated, Any, Callable, Optional, TypeVar
 
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 
 from pylanis import formatting
 from pylanis.client import SUPPORTED_APPS, Lanis
@@ -27,6 +31,29 @@ _F = TypeVar("_F", bound=Callable[..., Any])
 
 _active: Optional[Lanis] = None
 """The Lanis client the tools use. Set by run_server()."""
+
+Format = Annotated[
+    ResponseFormat,
+    Field(
+        description=(
+            "'markdown' (default) for text to show to the user, "
+            "'json' for data to process further."
+        ),
+    ),
+]
+"""The response_format parameter that most tools share."""
+
+IncludeResponsible = Annotated[
+    bool,
+    Field(
+        description=(
+            "Also fetch the person responsible for each event. Costs one "
+            "extra request to Lanis per event, so leave it off unless asked."
+        ),
+    ),
+]
+
+_DATE_PATTERN = r"^\d{4}-\d{2}-\d{2}$"
 
 
 # ---------------------------------------------------------------------------
@@ -80,33 +107,15 @@ def _read_only_tool(name: str, title: str) -> Callable[[_F], _F]:
 
 @_read_only_tool("get_schools", "Get All Lanis Schools")
 async def lanis_get_schools(
-    response_format: ResponseFormat = ResponseFormat.MARKDOWN,
+    response_format: Format = ResponseFormat.MARKDOWN,
 ) -> str:
-    """Return all schools registered in Schulportal Hessen (Lanis).
+    """List every school in Schulportal Hessen (Lanis) with its ID, name and city.
 
-    Fetches the complete list of schools with their ID, name, and city.
-    This tool does NOT require authentication and can be used to look up
-    the school ID needed for configuring Lanis credentials.
+    The only tool that works without credentials: use it to find the school
+    ID that LANIS_SCHOOL_ID needs. It returns the whole list, which is long,
+    so search the result for the name or city.
 
-    Args:
-        response_format: Output format - 'markdown' (default) or 'json'.
-
-    Returns:
-        List of schools. JSON schema:
-        {
-            "count": int,
-            "schools": [
-                {
-                    "id": str,
-                    "name": str,
-                    "city": str
-                }
-            ]
-        }
-
-    Error Handling:
-        - Returns "Error: ..." on API failure
-        - Returns "No schools found." if the list is empty
+    Returns "Error: ..." if Lanis can't be reached.
     """
     return _respond(
         lambda: formatting.schools_view(Lanis.get_schools()), response_format
@@ -115,48 +124,19 @@ async def lanis_get_schools(
 
 @_read_only_tool("get_substitution_plan", "Get Substitution Plan (Vertretungsplan)")
 async def lanis_get_substitution_plan(
-    response_format: ResponseFormat = ResponseFormat.MARKDOWN,
+    response_format: Format = ResponseFormat.MARKDOWN,
 ) -> str:
-    """Return today's substitution plan (Vertretungsplan) from Lanis.
+    """Return today's substitution plan (Vertretungsplan): cancelled and changed lessons.
 
-    Fetches all substitutions for the current school day including class,
-    subject, room, teacher/substitute, and any notices.
+    Use it for what changes today. For the regular weekly lessons use
+    get_timetable. Each entry has the substitute and the original teacher
+    (abbreviations, get_learning_groups resolves them), the affected hours
+    and class, subject, room and a notice. The JSON also has the date and the
+    general info box of the plan.
 
-    Args:
-        response_format: Output format - 'markdown' (default, human-readable)
-                         or 'json' (machine-readable).
-
-    Returns:
-        Substitution plan data with the following structure per substitution:
-        - substitute: Abbreviation of the substitute teacher
-        - teacher: Abbreviation of the original teacher
-        - hours: Which school hours are affected (e.g. "3-4")
-        - class_name: Affected class(es)
-        - subject: Subject name (may be empty)
-        - room: Room number/name
-        - notice: Additional information
-
-        JSON schema:
-        {
-            "date": "YYYY-MM-DD",
-            "info": str,           # General info box ("Allgemein"), may be empty
-            "substitutions": [
-                {
-                    "substitute": str,
-                    "teacher": str,
-                    "hours": str,
-                    "class_name": str,
-                    "subject": str,
-                    "room": str,
-                    "notice": str
-                }
-            ]
-        }
-
-    Error Handling:
-        - Returns "Error: Session expired..." if session needs renewal
-        - Returns "No substitutions today." if there are none
-        - Returns "No substitution plan published yet." before Lanis publishes one
+    Returns "No substitutions today (...)" if nothing changes, "No substitution
+    plan published yet." before the school publishes one, and "Error:
+    Session expired..." if the login expired (retry once).
     """
     return _respond(
         lambda: formatting.substitution_plan_view(_lanis().get_substitution_plan()),
@@ -164,112 +144,64 @@ async def lanis_get_substitution_plan(
     )
 
 
-class CalendarInput(BaseModel):
-    """Input for fetching calendar events in a date range."""
-
-    model_config = ConfigDict(str_strip_whitespace=True)
-
-    start: str = Field(
-        ...,
-        description="Start date in YYYY-MM-DD format (e.g. '2024-01-01')",
-        pattern=r"^\d{4}-\d{2}-\d{2}$",
-    )
-    end: str = Field(
-        ...,
-        description="End date in YYYY-MM-DD format (e.g. '2024-01-31')",
-        pattern=r"^\d{4}-\d{2}-\d{2}$",
-    )
-    response_format: ResponseFormat = Field(
-        default=ResponseFormat.MARKDOWN,
-        description="Output format: 'markdown' or 'json'",
-    )
-    include_responsible: bool = Field(
-        default=False,
-        description=(
-            "If True, fetch the responsible person for each event. "
-            "Warning: makes one extra API call per event and may be slow."
-        ),
-    )
-
-
 @_read_only_tool("get_calendar", "Get Calendar Events")
-async def lanis_get_calendar(params: CalendarInput) -> str:
-    """Return calendar events from Lanis for a given date range.
+async def lanis_get_calendar(
+    start: Annotated[
+        str,
+        Field(
+            description="First day of the range, YYYY-MM-DD (e.g. '2026-01-01').",
+            pattern=_DATE_PATTERN,
+        ),
+    ],
+    end: Annotated[
+        str,
+        Field(
+            description="Last day of the range, YYYY-MM-DD (e.g. '2026-01-31').",
+            pattern=_DATE_PATTERN,
+        ),
+    ],
+    response_format: Format = ResponseFormat.MARKDOWN,
+    include_responsible: IncludeResponsible = False,
+) -> str:
+    """Return the school calendar events (Kalender) between two dates.
 
-    Fetches school calendar events (Kalender) between the specified
-    start and end dates.
+    Use it for dates beyond the current month, such as holidays, parent
+    evenings or exams. For the current month, get_calendar_of_month needs no
+    dates. Each event has a title, description, place, start and end and
+    whether it lasts the whole day.
 
-    Args:
-        params (CalendarInput): Validated input parameters:
-            - start (str): Start date as YYYY-MM-DD
-            - end (str): End date as YYYY-MM-DD
-            - response_format (str): 'markdown' (default) or 'json'
-            - include_responsible (bool): If True, fetch the responsible person
-              for each event. Warning: makes one extra API call per event.
-
-    Returns:
-        Calendar events for the date range. JSON schema:
-        {
-            "start": "YYYY-MM-DD",
-            "end": "YYYY-MM-DD",
-            "count": int,
-            "events": [
-                {
-                    "title": str,
-                    "description": str,
-                    "place": str,
-                    "start": "YYYY-MM-DD HH:MM",
-                    "end": "YYYY-MM-DD HH:MM",
-                    "whole_day": bool,
-                    "responsible": str   # only present when include_responsible=True
-                }
-            ]
-        }
-
-    Error Handling:
-        - Returns "Error: ..." on API or auth failure
-        - Returns "No events found ..." if calendar is empty
+    Returns "Error: Invalid date format..." for a date that doesn't exist and
+    "No events found between..." if the range has none.
     """
     try:
-        start = datetime.strptime(params.start, "%Y-%m-%d")
-        end = datetime.strptime(params.end, "%Y-%m-%d")
+        start_date = datetime.strptime(start, "%Y-%m-%d")
+        end_date = datetime.strptime(end, "%Y-%m-%d")
     except ValueError as e:
         return f"Error: Invalid date format – {e}"
 
     return _respond(
         lambda: formatting.calendar_view(
-            _lanis().get_calendar(start, end, params.include_responsible),
-            params.start,
-            params.end,
-            params.include_responsible,
+            _lanis().get_calendar(start_date, end_date, include_responsible),
+            start,
+            end,
+            include_responsible,
         ),
-        params.response_format,
+        response_format,
     )
 
 
 @_read_only_tool("get_calendar_of_month", "Get Current Month Calendar Events")
 async def lanis_get_calendar_of_month(
-    response_format: ResponseFormat = ResponseFormat.MARKDOWN,
-    include_responsible: bool = False,
+    response_format: Format = ResponseFormat.MARKDOWN,
+    include_responsible: IncludeResponsible = False,
 ) -> str:
-    """Return all calendar events for the current month from Lanis.
+    """Return the school calendar events (Kalender) of the current month.
 
-    Convenience shortcut for lanis_get_calendar that automatically uses
-    the current month's date range.
+    The shortcut for questions about this month. For any other range use
+    get_calendar with start and end. The events have the same fields as
+    those of get_calendar.
 
-    Args:
-        response_format: Output format - 'markdown' (default) or 'json'.
-        include_responsible: If True, fetch the responsible person for each
-            event. Warning: makes one extra API call per event and may be slow.
-
-    Returns:
-        Same structure as lanis_get_calendar for the current month.
-        When include_responsible=True, each event also includes a
-        'responsible' field with the responsible person's name.
-
-    Error Handling:
-        - Returns "Error: ..." on API or auth failure
-        - Returns "No events this month." if calendar is empty
+    Returns "No events this month." if the month has none.
     """
     return _respond(
         lambda: formatting.calendar_of_month_view(
@@ -281,152 +213,76 @@ async def lanis_get_calendar_of_month(
 
 @_read_only_tool("get_tasks", "Get Tasks / Homework (Mein Unterricht)")
 async def lanis_get_tasks(
-    response_format: ResponseFormat = ResponseFormat.MARKDOWN,
+    response_format: Format = ResponseFormat.MARKDOWN,
 ) -> str:
-    """Return all tasks and homework from the 'Mein Unterricht' section of Lanis.
+    """Return the homework and tasks of 'Mein Unterricht'.
 
-    Fetches tasks assigned to the user including subject, teacher, description,
-    and download links for attachments.
+    Use it for questions about homework or what a teacher assigned. Each task
+    has a title, date, subject, teacher, description, details, the names of
+    its attachments and a download link for all of them as a zip file.
 
-    Args:
-        response_format: Output format - 'markdown' (default) or 'json'.
-
-    Returns:
-        List of tasks. JSON schema:
-        {
-            "count": int,
-            "tasks": [
-                {
-                    "title": str,
-                    "date": "YYYY-MM-DD",
-                    "subject_name": str,
-                    "teacher": str,
-                    "description": str,       # may be empty
-                    "details": str,           # may be empty
-                    "attachments": [str],     # list of attachment filenames
-                    "attachment_url": str     # zip download URL, may be empty
-                }
-            ]
-        }
-
-    Error Handling:
-        - Returns "Error: ..." on API or auth failure
-        - Returns "No tasks found." if there are none
+    Returns "No tasks found." if there are none.
     """
     return _respond(
         lambda: formatting.tasks_view(_lanis().get_tasks()), response_format
     )
 
 
-class ConversationsInput(BaseModel):
-    """Input for fetching conversations."""
-
-    model_config = ConfigDict()
-
-    number: int = Field(
-        default=10,
-        description=(
-            "Number of conversations to fetch (default: 10). "
-            "Use -1 to fetch all (may be slow and spam Lanis servers)."
-        ),
-        ge=-1,
-    )
-    response_format: ResponseFormat = Field(
-        default=ResponseFormat.MARKDOWN,
-        description="Output format: 'markdown' or 'json'",
-    )
-
-
 @_read_only_tool("get_conversations", "Get Conversations / Messages (Nachrichten)")
-async def lanis_get_conversations(params: ConversationsInput) -> str:
-    """Return conversations from the 'Nachrichten' section of Lanis.
+async def lanis_get_conversations(
+    number: Annotated[
+        int,
+        Field(
+            description=(
+                "How many conversations to fetch, newest first. Each one is "
+                "a request to Lanis, so keep it small; -1 fetches all."
+            ),
+            ge=-1,
+        ),
+    ] = 10,
+    response_format: Format = ResponseFormat.MARKDOWN,
+) -> str:
+    """Return the newest message threads from 'Nachrichten'.
 
-    Fetches message threads including sender, receivers, subject, and content.
+    Use it for messages from teachers or the school. Each conversation has
+    its ID, title, teacher, the dates of the first and newest message,
+    whether it is unread, the receivers and the content.
 
-    Args:
-        params (ConversationsInput): Validated input parameters:
-            - number (int): How many conversations to fetch (default: 10, -1 = all)
-            - response_format (str): 'markdown' (default) or 'json'
-
-    Returns:
-        List of conversations. JSON schema:
-        {
-            "count": int,
-            "conversations": [
-                {
-                    "id": str,
-                    "title": str,
-                    "teacher": str,
-                    "creation_date": str,
-                    "newest_date": str,
-                    "unread": bool,
-                    "receivers": [str],
-                    "special_receivers": [str],
-                    "content": str
-                }
-            ]
-        }
-
-    Error Handling:
-        - Returns "Error: ..." on API or auth failure
-        - Returns "No conversations found." if there are none
+    Returns "No conversations found." if there are none.
     """
     return _respond(
-        lambda: formatting.conversations_view(
-            _lanis().get_conversations(params.number)
-        ),
-        params.response_format,
+        lambda: formatting.conversations_view(_lanis().get_conversations(number)),
+        response_format,
     )
 
 
 @_read_only_tool("get_apps", "Get All Lanis Web Applets")
 async def lanis_get_apps(
-    response_format: ResponseFormat = ResponseFormat.MARKDOWN,
+    response_format: Format = ResponseFormat.MARKDOWN,
 ) -> str:
-    """Return all web applets (Apps) available in the user's Lanis portal.
+    """Return every app tile of the user's Lanis dashboard with its link.
 
-    Lists every app tile visible on the Lanis dashboard including name,
-    link, colour, icon symbol, and which folder/category it belongs to.
+    Use it to find the link to a school app, including those this server
+    can't read. Whether one of the apps these tools read is enabled is
+    answered by get_available_apps (all four) or check_app_availability
+    (one). Each tile has its name, link, colour, icon and the dashboard
+    folders it is in (see get_folders).
 
-    Args:
-        response_format: Output format - 'markdown' (default) or 'json'.
-
-    Returns:
-        List of apps. JSON schema:
-        {
-            "count": int,
-            "apps": [
-                {
-                    "name": str,
-                    "link": str,
-                    "colour": str,
-                    "symbol": str,
-                    "folders": [str]   # category/folder names
-                }
-            ]
-        }
-
-    Error Handling:
-        - Returns "Error: ..." on API or auth failure
-        - Returns "No apps found." if none are available
+    Returns "No apps found." if the dashboard is empty.
     """
     return _respond(lambda: formatting.apps_view(_lanis().get_apps()), response_format)
 
 
 @_read_only_tool("get_available_apps", "Get Supported Apps Available at This School")
 async def lanis_get_available_apps() -> str:
-    """Return the list of LanisAPI-supported apps that are available at this school.
+    """Return which of the apps these tools read are enabled at the user's school.
 
-    The LanisAPI library supports a specific subset of Lanis applets:
-    Kalender, Mein Unterricht, Nachrichten - Beta-Version, Vertretungsplan.
-    This tool checks which of those are enabled for the authenticated user's school.
+    Of Kalender, Mein Unterricht, Nachrichten - Beta-Version and
+    Vertretungsplan, lists those the school offers, so you know which of the
+    calendar, task, conversation and substitution plan tools can work. For a
+    single app use check_app_availability, for all dashboard tiles get_apps.
 
-    Returns:
-        Plain text list of supported app names available at this school,
-        or a message indicating none are supported.
-
-    Error Handling:
-        - Returns "Error: ..." on API or auth failure
+    Returns a plain text list, or a message if the school offers none.
     """
     return _respond(
         lambda: formatting.available_apps_view(_lanis().get_available_apps()),
@@ -436,33 +292,15 @@ async def lanis_get_available_apps() -> str:
 
 @_read_only_tool("get_folders", "Get Lanis Dashboard Folders")
 async def lanis_get_folders(
-    response_format: ResponseFormat = ResponseFormat.MARKDOWN,
+    response_format: Format = ResponseFormat.MARKDOWN,
 ) -> str:
-    """Return all folder/category groupings from the Lanis dashboard.
+    """Return the folders that group the app tiles on the Lanis dashboard.
 
-    Fetches the organizational folders that group apps on the Lanis portal.
-    Each folder has a name, a symbol (Font Awesome / Glyphicons icon), and
-    an optional colour.
+    Only needed to show the dashboard's structure: get_apps already names
+    the folders of each app. Each folder has a name, an icon and a colour,
+    which may be empty.
 
-    Args:
-        response_format: Output format - 'markdown' (default) or 'json'.
-
-    Returns:
-        List of folders. JSON schema:
-        {
-            "count": int,
-            "folders": [
-                {
-                    "name": str,
-                    "symbol": str,
-                    "colour": str   # may be empty if no colour is set
-                }
-            ]
-        }
-
-    Error Handling:
-        - Returns "Error: ..." on API or auth failure
-        - Returns "No folders found." if none are available
+    Returns "No folders found." if there are none.
     """
     return _respond(
         lambda: formatting.folders_view(_lanis().get_folders()), response_format
@@ -471,26 +309,25 @@ async def lanis_get_folders(
 
 @_read_only_tool("check_app_availability", "Check If a Specific App Is Available")
 async def lanis_check_app_availability(
-    app_name: str,
+    app_name: Annotated[
+        str,
+        Field(
+            description=(
+                "The app to check, exactly one of: "
+                + ", ".join(f"'{a}'" for a in SUPPORTED_APPS)
+                + "."
+            ),
+        ),
+    ],
 ) -> str:
-    """Check whether a specific Lanis app is available at the user's school.
+    """Check whether one of the apps these tools read is enabled at the user's school.
 
-    Checks one of the four LanisAPI-supported apps to see if it is enabled
-    at the authenticated user's school.
+    Use it before a calendar, task, conversation or substitution plan tool
+    fails, or to tell the user why. For all four at once use
+    get_available_apps.
 
-    Args:
-        app_name: The app to check. Must be one of:
-            - "Kalender"
-            - "Mein Unterricht"
-            - "Nachrichten - Beta-Version"
-            - "Vertretungsplan"
-
-    Returns:
-        A plain-text message indicating whether the app is available.
-
-    Error Handling:
-        - Returns "Error: ..." on API or auth failure
-        - Returns "Error: Unknown app ..." for invalid app names
+    Returns a sentence saying whether the app is available, or "Error:
+    Unknown app..." with the valid names.
     """
     if app_name not in SUPPORTED_APPS:
         valid = ", ".join(f'"{a}"' for a in SUPPORTED_APPS)
@@ -506,38 +343,17 @@ async def lanis_check_app_availability(
 
 @_read_only_tool("get_timetable", "Get Timetable (Stundenplan)")
 async def lanis_get_timetable(
-    response_format: ResponseFormat = ResponseFormat.MARKDOWN,
+    response_format: Format = ResponseFormat.MARKDOWN,
 ) -> str:
-    """Return the weekly timetable (Stundenplan) from Lanis.
+    """Return the regular weekly timetable (Stundenplan) of the user's class.
 
-    Fetches the current class timetable showing which subjects are taught
-    on which day and hour, including room and teacher information.
+    Use it for which lessons take place on which day. It doesn't show
+    today's cancellations or substitutions: get_substitution_plan does. Each
+    lesson has the day, the school hour and its time, subject, room, teacher
+    abbreviation and how many hours it lasts. The JSON also has the class and
+    the date the timetable is valid from.
 
-    Args:
-        response_format: Output format - 'markdown' (default) or 'json'.
-
-    Returns:
-        Timetable data. JSON schema:
-        {
-            "class_name": str,
-            "valid_from": "YYYY-MM-DD",
-            "entries": [
-                {
-                    "hour": str,        # e.g. "erste Stunde"
-                    "time": str,        # e.g. "08:00 - 08:45"
-                    "day": str,         # e.g. "Montag"
-                    "subject": str,     # subject code
-                    "room": str,        # room number/name
-                    "teacher": str,     # teacher abbreviation
-                    "info": str,        # full info from title attribute
-                    "duration": int     # number of school hours this lesson spans
-                }
-            ]
-        }
-
-    Error Handling:
-        - Returns "Error: ..." on API or auth failure
-        - Returns "No timetable entries found." if the timetable is empty
+    Returns "No timetable entries found." if the school publishes none.
     """
     return _respond(
         lambda: formatting.timetable_view(_lanis().get_timetable()), response_format
@@ -546,40 +362,16 @@ async def lanis_get_timetable(
 
 @_read_only_tool("get_learning_groups", "Get Learning Groups (Lerngruppen)")
 async def lanis_get_learning_groups(
-    response_format: ResponseFormat = ResponseFormat.MARKDOWN,
+    response_format: Format = ResponseFormat.MARKDOWN,
 ) -> str:
-    """Return the learning groups (Lerngruppen) the user belongs to.
+    """Return the courses (Lerngruppen) the user is enrolled in, with their teachers.
 
-    Fetches all learning groups/courses the authenticated user is enrolled in,
-    including subject name, course code, semester, and teacher information.
+    Use it to list the subjects, or to turn a teacher abbreviation from the
+    timetable or the substitution plan into a full name. Each group has its
+    ID, semester, course name and code and the teacher's name with the
+    abbreviation.
 
-    Use this tool to:
-    - List all courses/subjects the user is enrolled in
-    - Look up which teacher is responsible for a given subject or course
-    - Resolve teacher abbreviations to full names (the teacher field contains
-      both the full name and the abbreviation used in substitution plans)
-
-    Args:
-        response_format: Output format - 'markdown' (default) or 'json'.
-
-    Returns:
-        List of learning groups. JSON schema:
-        {
-            "count": int,
-            "groups": [
-                {
-                    "id": str,
-                    "semester": str,
-                    "course_name": str,
-                    "course_code": str,
-                    "teacher": str   # full name and/or abbreviation
-                }
-            ]
-        }
-
-    Error Handling:
-        - Returns "Error: ..." on API or auth failure
-        - Returns "No learning groups found." if there are none
+    Returns "No learning groups found." if there are none.
     """
     return _respond(
         lambda: formatting.learning_groups_view(_lanis().get_learning_groups()),
@@ -589,43 +381,26 @@ async def lanis_get_learning_groups(
 
 @_read_only_tool("get_file_storage", "Get File Storage (Dateispeicher)")
 async def lanis_get_file_storage(
-    folder_id: Optional[str] = None,
-    response_format: ResponseFormat = ResponseFormat.MARKDOWN,
+    folder_id: Annotated[
+        Optional[str],
+        Field(
+            description=(
+                "ID of the folder to open, from the folders of an earlier "
+                "call. Omit it for the top level."
+            ),
+        ),
+    ] = None,
+    response_format: Format = ResponseFormat.MARKDOWN,
 ) -> str:
-    """Return the contents of the school file storage (Dateispeicher).
+    """Return one folder of the school's file storage (Dateispeicher).
 
-    Lists folders and files in the Lanis file storage system. By default
-    returns the root level. Use folder_id to navigate into sub-folders.
+    Browse it one level per call: start without folder_id, then pass the ID
+    of a sub-folder. Files that were sent to the user are in
+    get_file_distribution instead. The result has the folder's ID and name,
+    its sub-folders (ID, name, description) and its files (ID, name,
+    description, download link).
 
-    Args:
-        folder_id: Optional folder ID to navigate into. Omit for root level.
-        response_format: Output format - 'markdown' (default) or 'json'.
-
-    Returns:
-        Folder contents. JSON schema:
-        {
-            "folder_id": str,
-            "folder_name": str,
-            "folders": [
-                {
-                    "id": str,
-                    "name": str,
-                    "description": str
-                }
-            ],
-            "files": [
-                {
-                    "id": str,
-                    "name": str,
-                    "description": str,
-                    "download_url": str
-                }
-            ]
-        }
-
-    Error Handling:
-        - Returns "Error: ..." on API or auth failure
-        - Returns "No items found." if the folder is empty
+    Returns "No items found in folder..." if the folder is empty.
     """
     return _respond(
         lambda: formatting.file_storage_view(_lanis().get_file_storage(folder_id)),
@@ -637,34 +412,15 @@ async def lanis_get_file_storage(
     "get_file_distribution", "Get File Distribution / Announcements (Dateiverteilung)"
 )
 async def lanis_get_file_distribution(
-    response_format: ResponseFormat = ResponseFormat.MARKDOWN,
+    response_format: Format = ResponseFormat.MARKDOWN,
 ) -> str:
-    """Return distributed files and announcements (Dateiverteilung / GRB Infos).
+    """Return the files the school sent to the user (Dateiverteilung), such as letters to parents.
 
-    Fetches files that have been distributed to the user via the Lanis
-    file distribution system (Dateiverteilung). These are typically
-    school-wide announcements or documents shared with specific groups.
+    Use it for announcements and documents shared with the user's groups.
+    The general file storage is get_file_storage. Each file has a name,
+    description, download link and date.
 
-    Args:
-        response_format: Output format - 'markdown' (default) or 'json'.
-
-    Returns:
-        List of distributed files. JSON schema:
-        {
-            "count": int,
-            "files": [
-                {
-                    "name": str,
-                    "description": str,
-                    "download_url": str,
-                    "date": str
-                }
-            ]
-        }
-
-    Error Handling:
-        - Returns "Error: ..." on API or auth failure
-        - Returns "No distributed files available." if there are none
+    Returns "No distributed files available." if there are none.
     """
     return _respond(
         lambda: formatting.file_distribution_view(_lanis().get_file_distribution()),
@@ -674,33 +430,15 @@ async def lanis_get_file_distribution(
 
 @_read_only_tool("get_votes", "Get Active Votes / Elections (Wahlen)")
 async def lanis_get_votes(
-    response_format: ResponseFormat = ResponseFormat.MARKDOWN,
+    response_format: Format = ResponseFormat.MARKDOWN,
 ) -> str:
-    """Return active votes and elections (Wahlen / GRB Wahlen) from Lanis.
+    """Return the votes and elections (Wahlen) that are open at the school.
 
-    Fetches currently active school votes and elections, such as student
-    council elections or other school-wide voting events.
+    Use it for questions about student council elections and other school
+    votes. It only lists them; voting happens in Lanis itself. Each vote has
+    its ID, title, description and status.
 
-    Args:
-        response_format: Output format - 'markdown' (default) or 'json'.
-
-    Returns:
-        List of active votes. JSON schema:
-        {
-            "count": int,
-            "votes": [
-                {
-                    "id": str,
-                    "title": str,
-                    "description": str,
-                    "status": str
-                }
-            ]
-        }
-
-    Error Handling:
-        - Returns "Error: ..." on API or auth failure
-        - Returns "No active votes." if there are none
+    Returns "No active votes." if there are none.
     """
     return _respond(
         lambda: formatting.votes_view(_lanis().get_votes()), response_format

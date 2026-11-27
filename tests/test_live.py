@@ -95,8 +95,7 @@ def test_substitution_plan(lanis):
 def test_calendar(lanis):
     print(f"\n  Events this month: {len(lanis.get_calendar_of_month())}")
     _assert_ok(run(srv.lanis_get_calendar_of_month(ResponseFormat.MARKDOWN)))
-    params = srv.CalendarInput(start="2026-01-01", end="2026-12-31")
-    _assert_ok(run(srv.lanis_get_calendar(params)))
+    _assert_ok(run(srv.lanis_get_calendar("2026-01-01", "2026-12-31")))
 
 
 def test_tasks(lanis):
@@ -109,8 +108,7 @@ def test_tasks(lanis):
 
 
 def test_conversations(lanis):
-    params = srv.ConversationsInput(number=3, response_format=ResponseFormat.JSON)
-    result = run(srv.lanis_get_conversations(params))
+    result = run(srv.lanis_get_conversations(3, ResponseFormat.JSON))
     if "AppNotAvailableError" in result:
         pytest.skip("Nachrichten is not available at this school")
     _assert_ok(result)
