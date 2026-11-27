@@ -6,7 +6,8 @@
 [![CI](https://github.com/udondan/lanis/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/udondan/lanis/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/udondan/lanis/graph/badge.svg)](https://codecov.io/gh/udondan/lanis)
 [![Maintainability](https://qlty.sh/gh/udondan/projects/lanis/maintainability.svg)](https://qlty.sh/gh/udondan/projects/lanis)
-[![License](https://img.shields.io/github/license/udondan/lanis)](LICENSE)
+[![License](https://img.shields.io/github/license/udondan/lanis)](https://github.com/udondan/lanis/blob/main/LICENSE)
+[![udondan/lanis MCP server](https://glama.ai/mcp/servers/udondan/lanis/badges/score.svg)](https://glama.ai/mcp/servers/udondan/lanis)
 
 > [!NOTE]
 > Inoffizielles Community-Projekt. Nicht mit dem Land Hessen oder dem Schulportal Hessen verbunden, nicht von ihnen unterstützt oder autorisiert.
