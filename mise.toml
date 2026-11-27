@@ -12,6 +12,11 @@ shellcheck = "0.11.0"
 zizmor = "1.33.1"
 # The `docker mcp` plugin for the Docker CI job. Docker Desktop ships its own.
 "github:docker/mcp-gateway" = "0.44.1"
+# The Lint CI job lints the MCP tool descriptions with these. mcp-tdqs is
+# published by Glama, which scores the server. It has few downloads so far,
+# which mise only installs when allowed.
+node = "26"
+"npm:mcp-tdqs" = { version = "0.2.0", allow_low_downloads = true }
 
 [tasks.setup]
 description = "Create .venv with the locked dependencies"
@@ -36,6 +41,10 @@ run = "uv run ruff check src/ tests/"
 [tasks.format]
 description = "Format source with ruff"
 run = "uv run ruff format src/ tests/"
+
+[tasks.lint-tools]
+description = "Lint the MCP tool descriptions (Tool Definition Quality Score)"
+run = "tdqs lint --command 'uv run lanis mcp' --server-name lanis --fail-on warning"
 
 [tasks.docker-build]
 description = "Build the Docker image"

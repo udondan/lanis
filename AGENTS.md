@@ -92,6 +92,7 @@ export LANIS_DATA_DIR=...
 | Build wheel                       | `mise run build`                     | `uv build --clear`                                    |
 | Lint                              | `mise run lint`                      | `uv run ruff check src/ tests/`                       |
 | Format                            | `mise run format`                    | `uv run ruff format src/ tests/`                      |
+| Lint tool descriptions            | `mise run lint-tools`                | see `mise.toml`                                       |
 | Build image                       | `mise run docker-build`              | `uv build --clear && docker build -t udondan/lanis .` |
 | Add to Docker MCP Toolkit profile | `mise run docker-register [profile]` | see `mise.toml`                                       |
 
@@ -226,7 +227,9 @@ Glama scores them (Tool Definition Quality Score). So:
   result's fields in prose instead of repeating a JSON schema, and quotes the
   exact empty and error messages.
 - The test `test_every_parameter_has_a_description` checks that every
-  parameter has a description.
+  parameter has a description. `mise run lint-tools` runs `tdqs lint`, the
+  deterministic checks of the TDQS, which the Lint CI job runs as well: a
+  warning fails it.
 
 ### Error Handling
 
