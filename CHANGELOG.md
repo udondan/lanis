@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/udondan/lanis/compare/v1.2.0...v1.3.0) (2026-11-27)
+
+
+### Features
+
+* describe every MCP tool parameter and when to use each tool ([#116](https://github.com/udondan/lanis/issues/116)) ([1f4819b](https://github.com/udondan/lanis/commit/1f4819bc54f808e85995c94cbe7f3eb2cc759c99))
+
 ## [1.2.0](https://github.com/udondan/lanis/compare/v1.1.5...v1.2.0) (2026-11-27)
 
 
