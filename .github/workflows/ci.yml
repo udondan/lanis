@@ -82,11 +82,22 @@ jobs:
         with:
           persist-credentials: false
       # uv from mise.toml. uv installs the Python version from .python-version.
+      # node and mcp-tdqs for the tool descriptions.
       - uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
         with:
-          install_args: uv
+          install_args: uv node npm:mcp-tdqs
       - run: uv sync --locked
       - run: uv run ruff check src/ tests/
+      # Tool Definition Quality Score (TDQS) of Glama: warnings fail the job,
+      # notes only go into the summary.
+      - name: Lint the MCP tool descriptions
+        run: |
+          status=0
+          tdqs lint --command "uv run lanis mcp" --server-name lanis \
+            --fail-on warning --format markdown --output tdqs.md || status=$?
+          cat tdqs.md
+          cat tdqs.md >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
 
   test:
     name: Test
