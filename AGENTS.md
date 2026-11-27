@@ -178,7 +178,7 @@ be part of the public namespace (e.g., `from pylanis.lanisapi import School as _
 ### Naming Conventions
 
 - `snake_case` for all functions, variables, and module names
-- `PascalCase` for Pydantic models and Enum classes (e.g., `CalendarInput`, `ResponseFormat`)
+- `PascalCase` for Pydantic models, Enum classes and annotated parameter types (e.g., `ResponseFormat`, `Format`)
 - Private helpers and module-level state: prefix with `_` (e.g., `_active`, `_handle_error`, `_to_str`)
 - MCP tool functions: `lanis_<action>` (e.g., `lanis_get_tasks`, `lanis_get_calendar`) — this is the **Python function name**; the MCP `name=` string omits the `lanis_` prefix (see below)
 - Constants: `UPPER_SNAKE_CASE` (e.g., `CHARACTER_LIMIT = 25_000`)
@@ -194,51 +194,39 @@ be part of the public namespace (e.g., `from pylanis.lanisapi import School as _
 
 ### MCP Tool Pattern
 
-Every tool follows this exact structure:
+Every tool follows this structure:
 
 ```python
-@mcp.tool(
-    name="<action>",
-    annotations=ToolAnnotations(
-        title="Human-Readable Title",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
-    ),
-)
+@_read_only_tool("<action>", "Human-Readable Title")
 async def lanis_<action>(
-    response_format: ResponseFormat = ResponseFormat.MARKDOWN,
+    folder_id: Annotated[Optional[str], Field(description="...")] = None,
+    response_format: Format = ResponseFormat.MARKDOWN,
 ) -> str:
-    """One-line summary.
+    """What the tool returns, in one line.
 
-    Full description.
+    When to use it, and which sibling tool to use instead for neighbouring
+    questions. The fields of the result in one or two sentences.
 
-    Args:
-        response_format: Output format - 'markdown' (default) or 'json'.
-
-    Returns:
-        Description of return value including JSON schema if applicable.
-
-    Error Handling:
-        - Returns "Error: ..." on specific failure modes
+    Returns "No ... found." if empty, "Error: ..." on failure.
     """
-    try:
-        return _render(formatting.<thing>_view(_lanis().get_<thing>()), response_format)
-    except Exception as e:
-        return _handle_error(e)
+    return _respond(
+        lambda: formatting.<thing>_view(_lanis().get_<thing>(folder_id)),
+        response_format,
+    )
 ```
 
-For tools with multiple structured inputs, define a Pydantic model:
+The docstring and the `Field` descriptions are what MCP clients see, and
+Glama scores them (Tool Definition Quality Score). So:
 
-```python
-class MyToolInput(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
-    field: str = Field(..., description="...", pattern=r"...")
-    response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN, ...)
-
-async def lanis_my_tool(params: MyToolInput) -> str: ...
-```
+- Parameters are top-level arguments, each with a `Field(description=...)`,
+  never one model wrapping them: the extra nesting makes the tool look more
+  expensive to call than its siblings. `Format` is the shared
+  `response_format` parameter.
+- The docstring says when to use the tool rather than a sibling. It names the
+  result's fields in prose instead of repeating a JSON schema, and quotes the
+  exact empty and error messages.
+- The test `test_every_parameter_has_a_description` checks that every
+  parameter has a description.
 
 ### Error Handling
 
@@ -273,7 +261,8 @@ Separate logical sections in `mcp.py` and `formatting.py` (one per tool or data 
 ### Docstrings
 
 - Module-level: describe purpose and required environment variables
-- Function-level: one-line summary, then full description, then Args/Returns/Error Handling
+- Function-level: one-line summary, then full description, then Args/Returns/Error Handling;
+  MCP tools follow the MCP Tool Pattern above instead
 - Short private helpers: single-line docstring is sufficient
 
 ## Git Workflow
